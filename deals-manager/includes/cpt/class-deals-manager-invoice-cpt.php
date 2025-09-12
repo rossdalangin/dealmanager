@@ -206,7 +206,7 @@ class Deals_Manager_Invoice_CPT {
             <a href="#" id="add-line-item" class="button"><?php _e( 'Add Item', 'deals-manager' ); ?></a>
         </p>
 
-        <script type="text/template" id="line-item-template">
+        <script type="text/template" id="tmpl-line-item-template">
             <tr class="line-item">
                 <td><input type="text" name="line_items[{index}][description]" class="widefat" /></td>
                 <td><input type="number" step="1" min="0" name="line_items[{index}][quantity]" value="1" class="widefat line-item-quantity" /></td>

@@ -2,38 +2,23 @@
 	'use strict';
 
 	$(function() {
-		console.log('Deals Manager Invoice script loaded.');
-
 		var container = $('#line-items-container');
 		if ( ! container.length ) {
-			console.error('Line items container not found.');
 			return;
 		}
-		console.log('Line items container found:', container);
-
-		if (typeof wp === 'undefined' || typeof wp.template === 'undefined') {
-			console.error('wp.template is not available. Check if wp-util is enqueued.');
-			return;
-		}
-
 		var template = wp.template('line-item-template');
-		console.log('Line item template found.');
 
 		// Calculate totals on page load
 		calculate_totals();
 
 		$('#add-line-item').on('click', function(e) {
 			e.preventDefault();
-			console.log('Add Item button clicked.');
 			var index = container.find('.line-item').length;
-			console.log('New item index:', index);
 			container.append( template({ index: index }) );
-			console.log('New item appended.');
 		});
 
 		container.on('click', '.remove-line-item', function(e) {
 			e.preventDefault();
-			console.log('Remove Item button clicked.');
 			$(this).closest('.line-item').remove();
 			calculate_totals();
 		});
@@ -55,7 +40,6 @@
 				subtotal += ( quantity * price );
 			});
 			$('#invoice-subtotal').text( subtotal.toFixed(2) );
-			console.log('Totals calculated. Subtotal:', subtotal.toFixed(2));
 		}
 	});
 
