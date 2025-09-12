@@ -168,13 +168,53 @@ class Deals_Manager_Invoice_CPT {
             </select>
         </p>
         <hr>
+        <h4><?php _e( 'Line Items', 'deals-manager' ); ?></h4>
+        <table id="invoice-line-items-wrapper" class="wp-list-table widefat fixed">
+            <thead>
+                <tr>
+                    <th style="width: 50%;"><?php _e( 'Description', 'deals-manager' ); ?></th>
+                    <th style="width: 15%;"><?php _e( 'Quantity', 'deals-manager' ); ?></th>
+                    <th style="width: 15%;"><?php _e( 'Price', 'deals-manager' ); ?></th>
+                    <th style="width: 15%;"><?php _e( 'Total', 'deals-manager' ); ?></th>
+                    <th style="width: 5%;"></th>
+                </tr>
+            </thead>
+            <tbody id="line-items-container">
+                <?php
+                if ( is_array( $line_items ) && ! empty( $line_items ) ) :
+                    foreach ( $line_items as $i => $item ) :
+                ?>
+                        <tr class="line-item">
+                            <td><input type="text" name="line_items[<?php echo esc_attr( $i ); ?>][description]" value="<?php echo esc_attr( $item['description'] ); ?>" class="widefat" /></td>
+                            <td><input type="number" step="1" min="0" name="line_items[<?php echo esc_attr( $i ); ?>][quantity]" value="<?php echo esc_attr( $item['quantity'] ); ?>" class="widefat line-item-quantity" /></td>
+                            <td><input type="number" step="0.01" min="0" name="line_items[<?php echo esc_attr( $i ); ?>][price]" value="<?php echo esc_attr( $item['price'] ); ?>" class="widefat line-item-price" /></td>
+                            <td><span class="line-item-total"><?php echo esc_html( number_format( (float) $item['quantity'] * (float) $item['price'], 2 ) ); ?></span></td>
+                            <td><a href="#" class="remove-line-item button">&times;</a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="3" style="text-align:right;"><?php _e( 'Subtotal:', 'deals-manager' ); ?></th>
+                    <th id="invoice-subtotal">0.00</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
         <p>
-            <label for="invoice_line_items"><?php _e( 'Line Items', 'deals-manager' ); ?></label>
-            <br>
-            <textarea id="invoice_line_items" name="invoice_line_items" rows="10" cols="50" placeholder="<?php _e( 'e.g. Website Design|1|1500', 'deals-manager' ); ?>"><?php echo esc_textarea( $line_items ); ?></textarea>
-            <br>
-            <small><?php _e( 'Enter one item per line. Format: Description|Quantity|Price', 'deals-manager' ); ?></small>
+            <a href="#" id="add-line-item" class="button"><?php _e( 'Add Item', 'deals-manager' ); ?></a>
         </p>
+
+        <script type="text/template" id="line-item-template">
+            <tr class="line-item">
+                <td><input type="text" name="line_items[{index}][description]" class="widefat" /></td>
+                <td><input type="number" step="1" min="0" name="line_items[{index}][quantity]" value="1" class="widefat line-item-quantity" /></td>
+                <td><input type="number" step="0.01" min="0" name="line_items[{index}][price]" value="0.00" class="widefat line-item-price" /></td>
+                <td><span class="line-item-total">0.00</span></td>
+                <td><a href="#" class="remove-line-item button">&times;</a></td>
+            </tr>
+        </script>
         <?php
     }
 
@@ -224,8 +264,21 @@ class Deals_Manager_Invoice_CPT {
             update_post_meta( $post_id, '_invoice_related_company', sanitize_text_field( $_POST['invoice_related_company'] ) );
         }
 
-        if ( isset( $_POST['invoice_line_items'] ) ) {
-            update_post_meta( $post_id, '_invoice_line_items', sanitize_textarea_field( $_POST['invoice_line_items'] ) );
-        }
+        if ( isset( $_POST['line_items'] ) && is_array( $_POST['line_items'] ) ) {
+			$sanitized_line_items = array();
+			foreach ( $_POST['line_items'] as $item ) {
+				if ( ! empty( $item['description'] ) ) {
+					$sanitized_line_items[] = array(
+						'description' => sanitize_text_field( $item['description'] ),
+						'quantity'    => (int) $item['quantity'],
+						'price'       => (float) $item['price'],
+					);
+				}
+			}
+			update_post_meta( $post_id, '_invoice_line_items', $sanitized_line_items );
+		} else {
+			// If no line items are submitted, delete the meta.
+			delete_post_meta( $post_id, '_invoice_line_items' );
+		}
     }
 }

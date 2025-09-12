@@ -39,13 +39,28 @@ class Deals_Manager_Deal_CPT {
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
+     * @param    Deals_Manager_Loader $loader Maintains and registers all hooks for the plugin.
      */
     public function __construct( $loader ) {
         $this->loader = $loader;
     }
 
     /**
+     * Run all the hooks for this class.
+     *
+     * @since 1.0.0
+     */
+    public function run() {
+        $this->loader->add_action( 'init', $this, 'register_cpt' );
+        $this->loader->add_action( 'add_meta_boxes', $this, 'add_meta_boxes' );
+        $this->loader->add_action( 'save_post_deal', $this, 'save_meta_data' );
+		$this->loader->add_action( 'save_post_deal', $this, 'save_deal_activity' );
+    }
+
+    /**
      * Register the custom post type.
+     *
+     * @since 1.0.0
      */
     public function register_cpt() {
         $labels = array(
@@ -97,17 +112,9 @@ class Deals_Manager_Deal_CPT {
     }
 
     /**
-     * Run all the hooks for this class.
-     */
-    public function run() {
-        $this->loader->add_action( 'init', $this, 'register_cpt' );
-        $this->loader->add_action( 'add_meta_boxes', $this, 'add_meta_boxes' );
-        $this->loader->add_action( 'save_post_deal', $this, 'save_meta_data' );
-		$this->loader->add_action( 'save_post_deal', $this, 'save_deal_activity' );
-    }
-
-    /**
      * Adds the meta box container.
+     *
+     * @since 1.0.0
      */
     public function add_meta_boxes() {
         add_meta_box(
@@ -127,24 +134,41 @@ class Deals_Manager_Deal_CPT {
 			'normal',
 			'default'
 		);
+
+		// Add custom field groups
+		$field_groups = get_posts( array(
+			'post_type' => 'dm_field_group',
+			'posts_per_page' => -1,
+			'meta_key' => '_dm_location',
+			'meta_value' => 'deal',
+		) );
+
+		foreach ( $field_groups as $group ) {
+			add_meta_box(
+				'dm_field_group_' . $group->ID,
+				$group->post_title,
+				array( $this, 'render_dynamic_meta_box' ),
+				$this->post_type,
+				'normal',
+				'default',
+				array( 'fields' => get_post_meta( $group->ID, '_dm_fields', true ) )
+			);
+		}
     }
 
     /**
-     * Render Meta Box content.
+     * Render Meta Box content for the main deal details.
      *
+     * @since 1.0.0
      * @param WP_Post $post The post object.
      */
     public function render_meta_box( $post ) {
-        // Add a nonce field so we can check for it later.
         wp_nonce_field( 'deal_details_meta_box', 'deal_details_meta_box_nonce' );
 
-        // Use get_post_meta to retrieve an existing value from the database.
         $value = get_post_meta( $post->ID, '_deal_value', true );
         $owner = get_post_meta( $post->ID, '_deal_owner', true );
         $priority = get_post_meta( $post->ID, '_deal_priority', true );
         $stage = get_post_meta( $post->ID, '_deal_stage', true );
-
-        // Display the form, using the current values.
         ?>
         <p>
             <label for="deal_value"><?php _e( 'Value', 'deals-manager' ); ?></label>
@@ -179,57 +203,27 @@ class Deals_Manager_Deal_CPT {
             </select>
         </p>
         <?php
-		/**
-		 * Filter to add custom fields to the Deal CPT.
-		 *
-		 * @since 1.0.0
-		 *
-		 * @param array   $fields Array of custom fields.
-		 * @param WP_Post $post   The current post object.
-		 */
-		$custom_fields = apply_filters( 'dm_deal_custom_fields', array(), $post );
-
-		if ( ! empty( $custom_fields ) ) {
-			echo '<hr>';
-			foreach ( $custom_fields as $field ) {
-				$this->render_field( $field, $post->ID );
-			}
-		}
     }
 
     /**
      * Save the meta when the post is saved.
      *
+     * @since 1.0.0
      * @param int $post_id The ID of the post being saved.
      */
     public function save_meta_data( $post_id ) {
-        // Check if our nonce is set.
-        if ( ! isset( $_POST['deal_details_meta_box_nonce'] ) ) {
+        if ( ! isset( $_POST['deal_details_meta_box_nonce'] ) || ! wp_verify_nonce( $_POST['deal_details_meta_box_nonce'], 'deal_details_meta_box' ) ) {
             return;
         }
 
-        // Verify that the nonce is valid.
-        if ( ! wp_verify_nonce( $_POST['deal_details_meta_box_nonce'], 'deal_details_meta_box' ) ) {
-            return;
-        }
-
-        // If this is an autosave, our form has not been submitted, so we don't want to do anything.
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
             return;
         }
 
-        // Check the user's permissions.
-        if ( isset( $_POST['post_type'] ) && 'deal' == $_POST['post_type'] ) {
-            if ( ! current_user_can( 'edit_post', $post_id ) ) {
-                return;
-            }
-        } else {
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
             return;
         }
 
-        /* OK, it's safe for us to save the data now. */
-
-        // Sanitize user input and update the meta field in the database.
         if ( isset( $_POST['deal_value'] ) ) {
             update_post_meta( $post_id, '_deal_value', sanitize_text_field( $_POST['deal_value'] ) );
         }
@@ -273,13 +267,27 @@ class Deals_Manager_Deal_CPT {
 			update_post_meta( $post_id, '_deal_stage', $new_stage );
 		}
 
-		// Save custom fields
-		$custom_fields = apply_filters( 'dm_deal_custom_fields', array(), get_post( $post_id ) );
-		foreach ( $custom_fields as $field ) {
-			if ( isset( $_POST[ $field['name'] ] ) ) {
-				// Basic sanitization, can be improved with a filter or more logic based on field type.
-				$value = sanitize_text_field( $_POST[ $field['name'] ] );
-				update_post_meta( $post_id, '_' . $field['name'], $value );
+		// Save custom fields data
+		if ( isset( $_POST['dm_custom_fields_meta_box_nonce'] ) && wp_verify_nonce( $_POST['dm_custom_fields_meta_box_nonce'], 'dm_custom_fields_meta_box' ) ) {
+			$field_groups = get_posts(
+				array(
+					'post_type'      => 'dm_field_group',
+					'posts_per_page' => -1,
+					'meta_key'       => '_dm_location',
+					'meta_value'     => 'deal',
+				)
+			);
+
+			foreach ( $field_groups as $group ) {
+				$fields = get_post_meta( $group->ID, '_dm_fields', true );
+				if ( is_array( $fields ) ) {
+					foreach ( $fields as $field ) {
+						if ( isset( $_POST[ $field['name'] ] ) ) {
+							$value = sanitize_text_field( wp_unslash( $_POST[ $field['name'] ] ) );
+							update_post_meta( $post_id, '_' . $field['name'], $value );
+						}
+					}
+				}
 			}
 		}
     }
@@ -287,6 +295,7 @@ class Deals_Manager_Deal_CPT {
 	/**
 	 * Render the Activity meta box.
 	 *
+	 * @since 1.0.0
 	 * @param WP_Post $post The post object.
 	 */
 	public function render_activity_meta_box( $post ) {
@@ -347,6 +356,7 @@ class Deals_Manager_Deal_CPT {
 	/**
 	 * Save the deal activity.
 	 *
+	 * @since 1.0.0
 	 * @param int $post_id The ID of the post being saved.
 	 */
 	public function save_deal_activity( $post_id ) {
@@ -386,6 +396,7 @@ class Deals_Manager_Deal_CPT {
 	/**
 	 * Helper to render a custom field.
 	 *
+	 * @since 1.0.0
 	 * @param array   $field   The field definition.
 	 * @param int     $post_id The post ID.
 	 */
@@ -416,5 +427,25 @@ class Deals_Manager_Deal_CPT {
 			?>
 		</p>
 		<?php
+	}
+
+	/**
+	 * Render the meta box for a dynamic field group.
+	 *
+	 * @since 1.0.0
+	 * @param WP_Post $post    The post object.
+	 * @param array   $metabox The meta box arguments.
+	 */
+	public function render_dynamic_meta_box( $post, $metabox ) {
+		// Add a nonce field so we can check for it later.
+		wp_nonce_field( 'dm_custom_fields_meta_box', 'dm_custom_fields_meta_box_nonce' );
+
+		$fields = isset( $metabox['args']['fields'] ) ? $metabox['args']['fields'] : array();
+
+		if ( is_array( $fields ) ) {
+			foreach ( $fields as $field ) {
+				$this->render_field( $field, $post->ID );
+			}
+		}
 	}
 }

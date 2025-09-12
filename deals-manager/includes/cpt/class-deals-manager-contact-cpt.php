@@ -39,6 +39,7 @@ class Deals_Manager_Contact_CPT {
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
+     * @param    Deals_Manager_Loader $loader Maintains and registers all hooks for the plugin.
      */
     public function __construct( $loader ) {
         $this->loader = $loader;
@@ -46,15 +47,19 @@ class Deals_Manager_Contact_CPT {
 
     /**
      * Run all the hooks for this class.
+     *
+     * @since 1.0.0
      */
     public function run() {
         $this->loader->add_action( 'init', $this, 'register_cpt' );
         $this->loader->add_action( 'add_meta_boxes', $this, 'add_meta_boxes' );
-        $this->loader->add_action( 'save_post', $this, 'save_meta_data' );
+        $this->loader->add_action( 'save_post_contact', $this, 'save_meta_data' );
     }
 
     /**
      * Register the custom post type.
+     *
+     * @since 1.0.0
      */
     public function register_cpt() {
         $labels = array(
@@ -107,6 +112,8 @@ class Deals_Manager_Contact_CPT {
 
     /**
      * Adds the meta box container.
+     *
+     * @since 1.0.0
      */
     public function add_meta_boxes() {
         add_meta_box(
@@ -117,11 +124,32 @@ class Deals_Manager_Contact_CPT {
             'advanced',
             'high'
         );
+
+        // Add custom field groups
+		$field_groups = get_posts( array(
+			'post_type' => 'dm_field_group',
+			'posts_per_page' => -1,
+			'meta_key' => '_dm_location',
+			'meta_value' => 'contact',
+		) );
+
+		foreach ( $field_groups as $group ) {
+			add_meta_box(
+				'dm_field_group_' . $group->ID,
+				$group->post_title,
+				array( $this, 'render_dynamic_meta_box' ),
+				$this->post_type,
+				'normal',
+				'default',
+				array( 'fields' => get_post_meta( $group->ID, '_dm_fields', true ) )
+			);
+		}
     }
 
     /**
      * Render Meta Box content.
      *
+     * @since 1.0.0
      * @param WP_Post $post The post object.
      */
     public function render_meta_box( $post ) {
@@ -144,43 +172,20 @@ class Deals_Manager_Contact_CPT {
             <input type="text" id="contact_job_title" name="contact_job_title" value="<?php echo esc_attr( $job_title ); ?>" size="25" />
         </p>
         <?php
-		/**
-		 * Filter to add custom fields to the Contact CPT.
-		 *
-		 * @since 1.0.0
-		 *
-		 * @param array   $fields Array of custom fields.
-		 * @param WP_Post $post   The current post object.
-		 */
-		$custom_fields = apply_filters( 'dm_contact_custom_fields', array(), $post );
-
-		if ( ! empty( $custom_fields ) ) {
-			echo '<hr>';
-			foreach ( $custom_fields as $field ) {
-				$this->render_field( $field, $post->ID );
-			}
-		}
     }
 
     /**
      * Save the meta when the post is saved.
      *
+     * @since 1.0.0
      * @param int $post_id The ID of the post being saved.
      */
     public function save_meta_data( $post_id ) {
-        if ( ! isset( $_POST['contact_details_meta_box_nonce'] ) ) {
-            return;
-        }
-
-        if ( ! wp_verify_nonce( $_POST['contact_details_meta_box_nonce'], 'contact_details_meta_box' ) ) {
+        if ( ! isset( $_POST['contact_details_meta_box_nonce'] ) || ! wp_verify_nonce( $_POST['contact_details_meta_box_nonce'], 'contact_details_meta_box' ) ) {
             return;
         }
 
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-            return;
-        }
-
-        if ( ! isset( $_POST['post_type'] ) || $this->post_type != $_POST['post_type'] ) {
             return;
         }
 
@@ -200,20 +205,54 @@ class Deals_Manager_Contact_CPT {
             update_post_meta( $post_id, '_contact_job_title', sanitize_text_field( $_POST['contact_job_title'] ) );
         }
 
-		// Save custom fields
-		$custom_fields = apply_filters( 'dm_contact_custom_fields', array(), get_post( $post_id ) );
-		foreach ( $custom_fields as $field ) {
-			if ( isset( $_POST[ $field['name'] ] ) ) {
-				// Basic sanitization, can be improved with a filter or more logic based on field type.
-				$value = sanitize_text_field( $_POST[ $field['name'] ] );
-				update_post_meta( $post_id, '_' . $field['name'], $value );
+		// Save custom fields data
+		if ( isset( $_POST['dm_custom_fields_meta_box_nonce'] ) && wp_verify_nonce( $_POST['dm_custom_fields_meta_box_nonce'], 'dm_custom_fields_meta_box' ) ) {
+			$field_groups = get_posts(
+				array(
+					'post_type'      => 'dm_field_group',
+					'posts_per_page' => -1,
+					'meta_key'       => '_dm_location',
+					'meta_value'     => 'contact',
+				)
+			);
+
+			foreach ( $field_groups as $group ) {
+				$fields = get_post_meta( $group->ID, '_dm_fields', true );
+				if ( is_array( $fields ) ) {
+					foreach ( $fields as $field ) {
+						if ( isset( $_POST[ $field['name'] ] ) ) {
+							$value = sanitize_text_field( wp_unslash( $_POST[ $field['name'] ] ) );
+							update_post_meta( $post_id, '_' . $field['name'], $value );
+						}
+					}
+				}
 			}
 		}
     }
 
 	/**
+	 * Render the meta box for a dynamic field group.
+	 *
+	 * @since 1.0.0
+	 * @param WP_Post $post    The post object.
+	 * @param array   $metabox The meta box arguments.
+	 */
+	public function render_dynamic_meta_box( $post, $metabox ) {
+		wp_nonce_field( 'dm_custom_fields_meta_box', 'dm_custom_fields_meta_box_nonce' );
+
+		$fields = isset( $metabox['args']['fields'] ) ? $metabox['args']['fields'] : array();
+
+		if ( is_array( $fields ) ) {
+			foreach ( $fields as $field ) {
+				$this->render_field( $field, $post->ID );
+			}
+		}
+	}
+
+	/**
 	 * Helper to render a custom field.
 	 *
+	 * @since 1.0.0
 	 * @param array   $field   The field definition.
 	 * @param int     $post_id The post ID.
 	 */

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The admin-specific functionality of the plugin.
  *
@@ -13,8 +12,8 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * Defines the plugin name, version, and two examples hooks for how to
- * enqueue the admin-specific stylesheet and JavaScript.
+ * Defines the plugin name, version, and hooks for enqueueing
+ * the admin-specific stylesheet and JavaScript.
  *
  * @package    Deals_Manager
  * @subpackage Deals_Manager/admin
@@ -44,13 +43,13 @@ class Deals_Manager_Admin {
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
-	 * @param      string    $plugin_name       The name of this plugin.
-	 * @param      string    $version    The version of this plugin.
+	 * @param    string $plugin_name The name of this plugin.
+	 * @param    string $version     The version of this plugin.
 	 */
 	public function __construct( $plugin_name, $version ) {
 
 		$this->plugin_name = $plugin_name;
-		$this->version = $version;
+		$this->version     = $version;
 
 	}
 
@@ -58,6 +57,7 @@ class Deals_Manager_Admin {
 	 * Register the stylesheets for the admin area.
 	 *
 	 * @since    1.0.0
+	 * @param    string $hook The current admin page.
 	 */
 	public function enqueue_styles( $hook ) {
 		// Load main admin CSS.
@@ -73,6 +73,7 @@ class Deals_Manager_Admin {
 	 * Register the JavaScript for the admin area.
 	 *
 	 * @since    1.0.0
+	 * @param    string $hook The current admin page.
 	 */
 	public function enqueue_scripts( $hook ) {
 		// Load Kanban JS only on the pipeline page.
@@ -94,7 +95,7 @@ class Deals_Manager_Admin {
 			wp_register_script( 'chartjs', 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', array(), '4.5.0', true );
 			wp_enqueue_script( $this->plugin_name . '-reports', plugin_dir_url( __FILE__ ) . 'js/deals-manager-reports.js', array( 'jquery', 'chartjs' ), $this->version, true );
 
-			// Fetch and prepare data for reports
+			// Fetch and prepare data for reports.
 			$deals_by_stage  = array();
 			$deals_by_user   = array();
 			$total_won_value = 0;
@@ -145,7 +146,7 @@ class Deals_Manager_Admin {
 				wp_reset_postdata();
 			}
 
-			// Prepare data for JS
+			// Prepare data for JS.
 			$report_data = array(
 				'deals_by_stage'  => array(
 					'labels' => array_values( $stages ),
@@ -165,16 +166,29 @@ class Deals_Manager_Admin {
 				$report_data
 			);
 		}
+
+		$screen = get_current_screen();
+
+		// Load Invoice JS only on the invoice edit page.
+		if ( $screen && 'invoice' === $screen->id ) {
+			wp_enqueue_script( $this->plugin_name . '-invoice', plugin_dir_url( __FILE__ ) . 'js/deals-manager-invoice.js', array( 'jquery', 'wp-util' ), $this->version, true );
+		}
+
+		// Load Field Editor JS only on the field group edit page.
+		if ( $screen && 'dm_field_group' === $screen->id ) {
+			wp_enqueue_script( $this->plugin_name . '-field-editor', plugin_dir_url( __FILE__ ) . 'js/deals-manager-field-editor.js', array( 'jquery', 'jquery-ui-sortable', 'wp-util' ), $this->version, true );
+		}
 	}
 
 	/**
 	 * Add filters to the CPT list tables.
 	 *
+	 * @since 1.0.0
 	 * @param string $post_type The current post type.
 	 */
 	public function add_cpt_filters( $post_type ) {
 		if ( 'deal' === $post_type ) {
-			// Stage filter
+			// Stage filter.
 			$stages        = array( 'lead', 'proposal', 'negotiation', 'won', 'lost' );
 			$current_stage = isset( $_GET['deal_stage'] ) ? sanitize_text_field( wp_unslash( $_GET['deal_stage'] ) ) : '';
 			echo "<select name='deal_stage' id='deal_stage'>";
@@ -189,7 +203,7 @@ class Deals_Manager_Admin {
 			}
 			echo '</select>';
 
-			// Priority filter
+			// Priority filter.
 			$priorities        = array( 'low', 'normal', 'high' );
 			$current_priority = isset( $_GET['deal_priority'] ) ? sanitize_text_field( wp_unslash( $_GET['deal_priority'] ) ) : '';
 			echo "<select name='deal_priority' id='deal_priority'>";
@@ -204,7 +218,7 @@ class Deals_Manager_Admin {
 			}
 			echo '</select>';
 
-			// Owner filter
+			// Owner filter.
 			wp_dropdown_users(
 				array(
 					'show_option_all' => 'All Owners',
@@ -215,7 +229,7 @@ class Deals_Manager_Admin {
 		}
 
 		if ( 'task' === $post_type ) {
-			// Status filter
+			// Status filter.
 			$statuses       = array( 'to-do', 'in-progress', 'completed' );
 			$current_status = isset( $_GET['task_status'] ) ? sanitize_text_field( wp_unslash( $_GET['task_status'] ) ) : '';
 			echo "<select name='task_status'>";
@@ -230,7 +244,7 @@ class Deals_Manager_Admin {
 			}
 			echo '</select>';
 
-			// Due date filter
+			// Due date filter.
 			$current_due = isset( $_GET['task_due'] ) ? sanitize_text_field( wp_unslash( $_GET['task_due'] ) ) : '';
 			echo "<select name='task_due'>";
 			echo "<option value=''>" . esc_html__( 'All Due Dates', 'deals-manager' ) . '</option>';
@@ -242,6 +256,10 @@ class Deals_Manager_Admin {
 	/**
 	 * Handle CPT list table filters.
 	 *
+	 * Modifies the main query for CPT list tables to apply custom filters
+	 * and restrict access for Sales Reps.
+	 *
+	 * @since 1.0.0
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public function handle_cpt_list_filters( $query ) {
@@ -251,7 +269,7 @@ class Deals_Manager_Admin {
 
 		global $typenow;
 
-		// Sales Rep filter
+		// Sales Rep filter: only show their own posts.
 		$user = wp_get_current_user();
 		if ( in_array( 'sales_rep', (array) $user->roles, true ) ) {
 			$cpts = array( 'deal', 'contact', 'company', 'task', 'invoice' );
@@ -260,7 +278,7 @@ class Deals_Manager_Admin {
 			}
 		}
 
-		// Deal filters
+		// Deal filters.
 		if ( 'deal' === $typenow ) {
 			$meta_query = $query->get( 'meta_query' ) ?: array();
 
@@ -288,7 +306,7 @@ class Deals_Manager_Admin {
 			}
 		}
 
-		// Task filters
+		// Task filters.
 		if ( 'task' === $typenow ) {
 			$meta_query = $query->get( 'meta_query' ) ?: array();
 
@@ -322,6 +340,7 @@ class Deals_Manager_Admin {
 	/**
 	 * Extend the CPT search to include custom fields.
 	 *
+	 * @since 1.0.0
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public function extend_cpt_search( $query ) {
@@ -339,8 +358,9 @@ class Deals_Manager_Admin {
 	/**
 	 * Join postmeta table for search.
 	 *
+	 * @since 1.0.0
 	 * @param string $join The JOIN clause.
-	 * @return string
+	 * @return string Modified JOIN clause.
 	 */
 	public function search_join( $join ) {
 		global $wpdb;
@@ -349,10 +369,11 @@ class Deals_Manager_Admin {
 	}
 
 	/**
-	 * Modify the search WHERE clause.
+	 * Modify the search WHERE clause to include post meta.
 	 *
+	 * @since 1.0.0
 	 * @param string $where The WHERE clause.
-	 * @return string
+	 * @return string Modified WHERE clause.
 	 */
 	public function search_where( $where ) {
 		global $wpdb;
@@ -367,6 +388,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Add a widget to the dashboard.
+	 *
+	 * @since 1.0.0
 	 */
 	public function add_dashboard_widget() {
 		wp_add_dashboard_widget(
@@ -378,6 +401,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Render the dashboard widget.
+	 *
+	 * @since 1.0.0
 	 */
 	public function render_dashboard_widget() {
 		$user_id = get_current_user_id();
@@ -394,13 +419,13 @@ class Deals_Manager_Admin {
 				),
 				array(
 					'relation' => 'OR',
-					array( // Overdue tasks
+					array( // Overdue tasks.
 						'key'     => '_task_due_date',
 						'value'   => date( 'Y-m-d' ),
 						'compare' => '<',
 						'type'    => 'DATE',
 					),
-					array( // Tasks due in the next 7 days
+					array( // Tasks due in the next 7 days.
 						'key'     => '_task_due_date',
 						'value'   => array( date( 'Y-m-d' ), date( 'Y-m-d', strtotime( '+7 days' ) ) ),
 						'compare' => 'BETWEEN',
@@ -436,6 +461,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Add the main plugin menu page.
+	 *
+	 * @since 1.0.0
 	 */
 	public function add_plugin_menu() {
 		add_menu_page(
@@ -451,18 +478,34 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Render the dashboard page.
+	 *
+	 * @since 1.0.0
 	 */
 	public function render_dashboard_page() {
 		?>
 		<div class="wrap">
 			<h1><?php _e( 'Deals Manager Dashboard', 'deals-manager' ); ?></h1>
 			<p><?php _e( 'Welcome to the Deals Manager dashboard. More widgets and reports coming soon!', 'deals-manager' ); ?></p>
+
+			<div class="postbox">
+				<h2 class="hndle"><span><?php _e( 'Sample Data', 'deals-manager' ); ?></span></h2>
+				<div class="inside">
+					<p><?php _e( 'Click the button below to install sample data. This will create sample deals, contacts, companies, etc., to help you get started.', 'deals-manager' ); ?></p>
+					<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+						<input type="hidden" name="action" value="dm_install_sample_data">
+						<?php wp_nonce_field( 'dm_install_sample_data_nonce', 'dm_nonce' ); ?>
+						<?php submit_button( __( 'Install Sample Data', 'deals-manager' ) ); ?>
+					</form>
+				</div>
+			</div>
 		</div>
 		<?php
 	}
 
 	/**
 	 * Add the pipeline page to the admin menu.
+	 *
+	 * @since 1.0.0
 	 */
 	public function add_pipeline_page() {
 		add_submenu_page(
@@ -477,6 +520,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Add the reports page to the admin menu.
+	 *
+	 * @since 1.0.0
 	 */
 	public function add_reports_page() {
 		add_submenu_page(
@@ -491,6 +536,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Render the reports page.
+	 *
+	 * @since 1.0.0
 	 */
 	public function render_reports_page() {
 		?>
@@ -535,6 +582,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Render the pipeline page.
+	 *
+	 * @since 1.0.0
 	 */
 	public function render_pipeline_page() {
 		?>
@@ -567,7 +616,7 @@ class Deals_Manager_Admin {
 						$deals->the_post();
 						$stage = get_post_meta( get_the_ID(), '_deal_stage', true );
 						if ( ! $stage ) {
-							$stage = 'lead'; // Default stage
+							$stage = 'lead'; // Default stage.
 						}
 						if ( array_key_exists( $stage, $deals_by_stage ) ) {
 							$deals_by_stage[ $stage ][] = get_post();
@@ -606,6 +655,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Handle the AJAX request to update deal stage.
+	 *
+	 * @since 1.0.0
 	 */
 	public function handle_update_deal_stage() {
 		check_ajax_referer( 'kanban-nonce', 'nonce' );
@@ -615,7 +666,7 @@ class Deals_Manager_Admin {
 		}
 
 		$deal_id   = intval( $_POST['deal_id'] );
-		$new_stage = sanitize_text_field( $_POST['new_stage'] );
+		$new_stage = sanitize_text_field( wp_unslash( $_POST['new_stage'] ) );
 
 		if ( ! current_user_can( 'edit_deal', $deal_id ) ) {
 			wp_send_json_error( 'Permission denied.' );
@@ -629,6 +680,7 @@ class Deals_Manager_Admin {
 	/**
 	 * Add an export button to the CPT list tables.
 	 *
+	 * @since 1.0.0
 	 * @param string $which 'top' or 'bottom'.
 	 */
 	public function add_export_button( $which ) {
@@ -657,6 +709,8 @@ class Deals_Manager_Admin {
 
 	/**
 	 * Handle the CSV export request.
+	 *
+	 * @since 1.0.0
 	 */
 	public function handle_csv_export() {
 		if ( ! isset( $_GET['export'] ) || 'csv' !== $_GET['export'] ) {
@@ -729,5 +783,25 @@ class Deals_Manager_Admin {
 
 		fclose( $output );
 		die();
+	}
+
+	/**
+	 * Handle the sample data installation request.
+	 *
+	 * @since 1.0.0
+	 */
+	public function handle_install_sample_data() {
+		if ( ! isset( $_POST['dm_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['dm_nonce'] ), 'dm_install_sample_data_nonce' ) ) {
+			wp_die( esc_html__( 'Invalid nonce.', 'deals-manager' ) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'deals-manager' ) );
+		}
+
+		Deals_Manager_Sample_Data::install();
+
+		wp_safe_redirect( admin_url( 'admin.php?page=deals-manager' ) );
+		exit;
 	}
 }

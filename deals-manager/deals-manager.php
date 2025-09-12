@@ -19,6 +19,10 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * The code that runs during plugin activation.
+ * This function is responsible for setting up the initial state of the plugin,
+ * including creating custom user roles and scheduling cron events.
+ *
+ * @since 1.0.0
  */
 function activate_deals_manager() {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/class-deals-manager-roles.php';
@@ -29,6 +33,10 @@ function activate_deals_manager() {
 
 /**
  * The code that runs during plugin deactivation.
+ * This function is responsible for cleaning up the plugin's state,
+ * including removing custom user roles and unscheduling cron events.
+ *
+ * @since 1.0.0
  */
 function deactivate_deals_manager() {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/class-deals-manager-roles.php';

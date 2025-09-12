@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The file that defines the core plugin class
  *
@@ -162,6 +161,16 @@ class Deals_Manager {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-deals-manager-cron.php';
 
+		/**
+		 * The class responsible for installing sample data.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-deals-manager-sample-data.php';
+
+		/**
+		 * The class responsible for defining the Field Group CPT.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/cpt/class-deals-manager-field-group-cpt.php';
+
 		$this->loader = new Deals_Manager_Loader();
 
 	}
@@ -206,6 +215,7 @@ class Deals_Manager {
 		$this->loader->add_action( 'manage_posts_extra_tablenav', $plugin_admin, 'add_export_button' );
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'handle_csv_export' );
 		$this->loader->add_action( 'wp_dashboard_setup', $plugin_admin, 'add_dashboard_widget' );
+		$this->loader->add_action( 'admin_post_dm_install_sample_data', $plugin_admin, 'handle_install_sample_data' );
 
 	}
 
@@ -251,6 +261,9 @@ class Deals_Manager {
 
 		$plugin_cpt_activity = new Deals_Manager_Activity_CPT( $this->get_loader() );
 		$plugin_cpt_activity->run();
+
+		$plugin_cpt_field_group = new Deals_Manager_Field_Group_CPT( $this->get_loader() );
+		$plugin_cpt_field_group->run();
 
 	}
 

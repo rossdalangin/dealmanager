@@ -143,23 +143,20 @@ get_header(); ?>
                     </tr>
 
                     <?php
-                    $line_items = explode( "\n", $line_items_raw );
+                    $line_items = is_array( $line_items_raw ) ? $line_items_raw : array();
                     $total = 0;
                     foreach ( $line_items as $item ) {
-                        $parts = explode( '|', $item );
-                        if ( count( $parts ) === 3 ) {
-                            $description = trim( $parts[0] );
-                            $quantity = trim( $parts[1] );
-                            $price = trim( $parts[2] );
-                            $item_total = $quantity * $price;
-                            $total += $item_total;
-                            ?>
-                            <tr class="item">
-                                <td><?php echo esc_html( $description ); ?> (Qty: <?php echo esc_html( $quantity ); ?>)</td>
-                                <td>$<?php echo esc_html( number_format( $item_total, 2 ) ); ?></td>
-                            </tr>
-                            <?php
-                        }
+						$description = isset( $item['description'] ) ? $item['description'] : '';
+						$quantity    = isset( $item['quantity'] ) ? (float) $item['quantity'] : 0;
+						$price       = isset( $item['price'] ) ? (float) $item['price'] : 0;
+						$item_total  = $quantity * $price;
+						$total      += $item_total;
+                        ?>
+                        <tr class="item">
+                            <td><?php echo esc_html( $description ); ?> (Qty: <?php echo esc_html( $quantity ); ?>)</td>
+                            <td>$<?php echo esc_html( number_format( $item_total, 2 ) ); ?></td>
+                        </tr>
+                        <?php
                     }
                     ?>
                     <tr class="total">

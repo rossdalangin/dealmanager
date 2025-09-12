@@ -12,6 +12,9 @@
 /**
  * The Cron class.
  *
+ * This class is responsible for scheduling and managing cron events for the plugin,
+ * such as sending email reminders.
+ *
  * @since      1.0.0
  * @package    Deals_Manager
  * @subpackage Deals_Manager/includes
@@ -21,6 +24,11 @@ class Deals_Manager_Cron {
 
     /**
      * Schedule cron events.
+     *
+     * This method is called on plugin activation to schedule the daily
+     * cron event for sending task reminders.
+     *
+     * @since 1.0.0
      */
     public static function schedule_events() {
         if ( ! wp_next_scheduled( 'dm_daily_reminder_check' ) ) {
@@ -30,6 +38,11 @@ class Deals_Manager_Cron {
 
     /**
      * Unschedule cron events.
+     *
+     * This method is called on plugin deactivation to unschedule the
+     * daily cron event.
+     *
+     * @since 1.0.0
      */
     public static function unschedule_events() {
         wp_clear_scheduled_hook( 'dm_daily_reminder_check' );
@@ -38,7 +51,11 @@ class Deals_Manager_Cron {
     /**
      * Daily reminder check.
      *
-     * This method is the callback for the cron job.
+     * This method is the callback for the 'dm_daily_reminder_check' cron job.
+     * It fetches all tasks that are due the next day and sends an email
+     * reminder to the task assignee.
+     *
+     * @since 1.0.0
      */
     public static function daily_reminder_check() {
         $args = array(

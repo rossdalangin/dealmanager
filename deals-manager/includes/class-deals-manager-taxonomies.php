@@ -12,6 +12,9 @@
 /**
  * The Custom Taxonomies class.
  *
+ * This class is responsible for registering the custom taxonomies
+ * used by the plugin.
+ *
  * @since      1.0.0
  * @package    Deals_Manager
  * @subpackage Deals_Manager/includes
@@ -33,6 +36,7 @@ class Deals_Manager_Taxonomies {
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
+     * @param    Deals_Manager_Loader $loader Maintains and registers all hooks for the plugin.
      */
     public function __construct( $loader ) {
         $this->loader = $loader;
@@ -40,6 +44,8 @@ class Deals_Manager_Taxonomies {
 
     /**
      * Run all the hooks for this class.
+     *
+     * @since 1.0.0
      */
     public function run() {
         $this->loader->add_action( 'init', $this, 'register_taxonomies' );
@@ -47,6 +53,10 @@ class Deals_Manager_Taxonomies {
 
     /**
      * Register the 'Group' taxonomy.
+     *
+     * This taxonomy is used to group deals, contacts, and companies.
+     *
+     * @since 1.0.0
      */
     public function register_taxonomies() {
         $labels = array(
