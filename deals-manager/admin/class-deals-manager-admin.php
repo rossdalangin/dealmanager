@@ -178,6 +178,19 @@ class Deals_Manager_Admin {
 		if ( $screen && 'dm_field_group' === $screen->id ) {
 			wp_enqueue_script( $this->plugin_name . '-field-editor', plugin_dir_url( __FILE__ ) . 'js/deals-manager-field-editor.js', array( 'jquery', 'jquery-ui-sortable', 'wp-util' ), $this->version, true );
 		}
+
+		// Load Print Deals JS only on the print deals page.
+		if ( 'deals-manager_page_deals-manager-print-deals' === $hook ) {
+			wp_enqueue_script( $this->plugin_name . '-print-deals', plugin_dir_url( __FILE__ ) . 'js/deals-manager-print.js', array( 'jquery' ), $this->version, true );
+			wp_localize_script(
+				$this->plugin_name . '-print-deals',
+				'print_deals_ajax',
+				array(
+					'ajax_url' => admin_url( 'admin-ajax.php' ),
+					'nonce'    => wp_create_nonce( 'dm-print-deals-nonce' ),
+				)
+			);
+		}
 	}
 
 	/**
@@ -560,7 +573,7 @@ class Deals_Manager_Admin {
 		<div class="wrap">
 			<h1><?php _e( 'Print Deals', 'deals-manager' ); ?></h1>
 			<p><?php _e( 'Select your filters below and click "Generate Report" to open a printer-friendly list of deals.', 'deals-manager' ); ?></p>
-			<form id="print-deals-form" action="<?php echo esc_url( plugin_dir_url( __FILE__ ) . 'print-deals.php' ); ?>" method="get" target="_blank">
+			<form id="print-deals-form">
 				<table class="form-table">
 					<tbody>
 						<tr>
@@ -861,5 +874,118 @@ class Deals_Manager_Admin {
 
 		wp_safe_redirect( admin_url( 'admin.php?page=deals-manager' ) );
 		exit;
+	}
+
+	/**
+	 * Handle the AJAX request for printing deals.
+	 *
+	 * @since 1.0.0
+	 */
+	public function handle_print_deals_ajax() {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['nonce'] ), 'dm-print-deals-nonce' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'deals-manager' ) ) );
+		}
+
+		if ( ! current_user_can( 'edit_deals' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to view this page.', 'deals-manager' ) ) );
+		}
+
+		$start_date = isset( $_POST['start_date'] ) ? sanitize_text_field( wp_unslash( $_POST['start_date'] ) ) : '';
+		$end_date   = isset( $_POST['end_date'] ) ? sanitize_text_field( wp_unslash( $_POST['end_date'] ) ) : '';
+		$user_id    = isset( $_POST['user_id'] ) ? (int) $_POST['user_id'] : 0;
+
+		$args = array(
+			'post_type'      => 'deal',
+			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+		);
+
+		if ( $user_id ) {
+			$args['author'] = $user_id;
+		}
+
+		if ( $start_date || $end_date ) {
+			$args['date_query'] = array(
+				'inclusive' => true,
+			);
+			if ( $start_date ) {
+				$args['date_query']['after'] = $start_date;
+			}
+			if ( $end_date ) {
+				$args['date_query']['before'] = $end_date;
+			}
+		}
+
+		$deals = new WP_Query( $args );
+
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<title><?php _e( 'Printable Deals Report', 'deals-manager' ); ?></title>
+			<style>
+				body { font-family: sans-serif; }
+				table { width: 100%; border-collapse: collapse; }
+				th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+				th { background-color: #f2f2f2; }
+				@media print {
+					.no-print { display: none; }
+				}
+			</style>
+		</head>
+		<body>
+			<button class="no-print" onclick="window.print();"><?php _e( 'Print', 'deals-manager' ); ?></button>
+			<h1><?php _e( 'Deals Report', 'deals-manager' ); ?></h1>
+			<p>
+				<?php
+				if ( $start_date && $end_date ) {
+					printf( '<strong>%s:</strong> %s to %s', esc_html__( 'Date Range', 'deals-manager' ), esc_html( $start_date ), esc_html( $end_date ) );
+				}
+				if ( $user_id ) {
+					$user_info = get_userdata( $user_id );
+					printf( '<br><strong>%s:</strong> %s', esc_html__( 'User', 'deals-manager' ), esc_html( $user_info->display_name ) );
+				}
+				?>
+			</p>
+			<table>
+				<thead>
+					<tr>
+						<th><?php _e( 'Deal', 'deals-manager' ); ?></th>
+						<th><?php _e( 'Owner', 'deals-manager' ); ?></th>
+						<th><?php _e( 'Stage', 'deals-manager' ); ?></th>
+						<th><?php _e( 'Value', 'deals-manager' ); ?></th>
+						<th><?php _e( 'Date Created', 'deals-manager' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php if ( $deals->have_posts() ) : ?>
+						<?php while ( $deals->have_posts() ) : $deals->the_post(); ?>
+							<?php
+							$deal_owner_id = get_the_author_meta( 'ID' );
+							$deal_owner_info = get_userdata( $deal_owner_id );
+							?>
+							<tr>
+								<td><?php the_title(); ?></td>
+								<td><?php echo esc_html( $deal_owner_info->display_name ); ?></td>
+								<td><?php echo esc_html( get_post_meta( get_the_ID(), '_deal_stage', true ) ); ?></td>
+								<td>$<?php echo esc_html( number_format( (float) get_post_meta( get_the_ID(), '_deal_value', true ), 2 ) ); ?></td>
+								<td><?php echo get_the_date(); ?></td>
+							</tr>
+						<?php endwhile; ?>
+						<?php wp_reset_postdata(); ?>
+					<?php else : ?>
+						<tr>
+							<td colspan="5"><?php _e( 'No deals found matching your criteria.', 'deals-manager' ); ?></td>
+						</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</body>
+		</html>
+		<?php
+		$html = ob_get_clean();
+		wp_send_json_success( array( 'html' => $html ) );
 	}
 }

@@ -223,6 +223,7 @@ class Deals_Manager {
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'handle_csv_export' );
 		$this->loader->add_action( 'wp_dashboard_setup', $plugin_admin, 'add_dashboard_widget' );
 		$this->loader->add_action( 'admin_post_dm_install_sample_data', $plugin_admin, 'handle_install_sample_data' );
+		$this->loader->add_action( 'wp_ajax_dm_print_deals', $plugin_admin, 'handle_print_deals_ajax' );
 
 	}
 
