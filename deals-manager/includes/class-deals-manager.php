@@ -116,10 +116,16 @@ class Deals_Manager {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-deals-manager-admin.php';
 
 		/**
+		/**
 		 * The class responsible for defining all actions that occur in the public-facing
 		 * side of the site.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-deals-manager-public.php';
+
+		/**
+		 * The class responsible for defining shortcodes.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-deals-manager-shortcodes.php';
 
 		/**
 		 * The class responsible for defining the Deal CPT.
@@ -233,6 +239,8 @@ class Deals_Manager {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 		$this->loader->add_filter( 'single_template', $plugin_public, 'load_invoice_template' );
+
+		$plugin_shortcodes = new Deals_Manager_Shortcodes();
 
 	}
 

@@ -169,7 +169,20 @@ class Deals_Manager_Deal_CPT {
         $owner = get_post_meta( $post->ID, '_deal_owner', true );
         $priority = get_post_meta( $post->ID, '_deal_priority', true );
         $stage = get_post_meta( $post->ID, '_deal_stage', true );
+        $related_contact = get_post_meta( $post->ID, '_deal_related_contact', true );
         ?>
+        <p>
+            <label for="deal_related_contact"><?php _e( 'Related Contact', 'deals-manager' ); ?></label>
+            <select name="deal_related_contact" id="deal_related_contact">
+                <option value=""><?php _e( 'None', 'deals-manager' ); ?></option>
+                <?php
+                $contacts = get_posts( array( 'post_type' => 'contact', 'numberposts' => -1 ) );
+                foreach ( $contacts as $contact ) {
+                    echo '<option value="' . esc_attr( $contact->ID ) . '"' . selected( $related_contact, $contact->ID, false ) . '>' . esc_html( $contact->post_title ) . '</option>';
+                }
+                ?>
+            </select>
+        </p>
         <p>
             <label for="deal_value"><?php _e( 'Value', 'deals-manager' ); ?></label>
             <input type="text" id="deal_value" name="deal_value" value="<?php echo esc_attr( $value ); ?>" size="25" />
@@ -222,6 +235,10 @@ class Deals_Manager_Deal_CPT {
 
         if ( ! current_user_can( 'edit_post', $post_id ) ) {
             return;
+        }
+
+        if ( isset( $_POST['deal_related_contact'] ) ) {
+            update_post_meta( $post_id, '_deal_related_contact', sanitize_text_field( $_POST['deal_related_contact'] ) );
         }
 
         if ( isset( $_POST['deal_value'] ) ) {
