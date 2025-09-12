@@ -535,6 +535,64 @@ class Deals_Manager_Admin {
 	}
 
 	/**
+	 * Add the print deals page to the admin menu.
+	 *
+	 * @since 1.0.0
+	 */
+	public function add_print_deals_page() {
+		add_submenu_page(
+			'deals-manager',
+			__( 'Print Deals', 'deals-manager' ),
+			__( 'Print Deals', 'deals-manager' ),
+			'edit_deals',
+			'deals-manager-print-deals',
+			array( $this, 'render_print_deals_page' )
+		);
+	}
+
+	/**
+	 * Render the print deals page.
+	 *
+	 * @since 1.0.0
+	 */
+	public function render_print_deals_page() {
+		?>
+		<div class="wrap">
+			<h1><?php _e( 'Print Deals', 'deals-manager' ); ?></h1>
+			<p><?php _e( 'Select your filters below and click "Generate Report" to open a printer-friendly list of deals.', 'deals-manager' ); ?></p>
+			<form id="print-deals-form" action="<?php echo esc_url( plugin_dir_url( __FILE__ ) . 'print-deals.php' ); ?>" method="get" target="_blank">
+				<table class="form-table">
+					<tbody>
+						<tr>
+							<th scope="row"><label for="start_date"><?php _e( 'Start Date', 'deals-manager' ); ?></label></th>
+							<td><input type="date" name="start_date" id="start_date" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="end_date"><?php _e( 'End Date', 'deals-manager' ); ?></label></th>
+							<td><input type="date" name="end_date" id="end_date" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="user_id"><?php _e( 'User', 'deals-manager' ); ?></label></th>
+							<td>
+								<?php
+								wp_dropdown_users(
+									array(
+										'show_option_all' => 'All Users',
+										'name'            => 'user_id',
+									)
+								);
+								?>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<?php submit_button( __( 'Generate Report', 'deals-manager' ) ); ?>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Render the reports page.
 	 *
 	 * @since 1.0.0

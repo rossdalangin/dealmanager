@@ -217,6 +217,7 @@ class Deals_Manager {
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_menu' );
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_pipeline_page' );
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_reports_page' );
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_print_deals_page' );
 		$this->loader->add_action( 'wp_ajax_update_deal_stage', $plugin_admin, 'handle_update_deal_stage' );
 		$this->loader->add_action( 'manage_posts_extra_tablenav', $plugin_admin, 'add_export_button' );
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'handle_csv_export' );

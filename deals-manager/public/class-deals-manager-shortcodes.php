@@ -36,15 +36,18 @@ class Deals_Manager_Shortcodes {
      * @return string The form HTML.
      */
     public function render_lead_form( $atts ) {
-        // Handle form submission
-        if ( isset( $_POST['dm_lead_form_submit'] ) && wp_verify_nonce( $_POST['dm_lead_form_nonce'], 'dm_lead_form' ) ) {
-            $this->handle_form_submission();
+        $message = '';
+        if ( isset( $_POST['dm_lead_form_submit'] ) && isset( $_POST['dm_lead_form_nonce'] ) && wp_verify_nonce( sanitize_key( $_POST['dm_lead_form_nonce'] ), 'dm_lead_form' ) ) {
+            $message = $this->handle_form_submission();
         }
 
         ob_start();
+
+        echo $message; // Display success or error message
         ?>
         <form action="" method="post" id="dm-lead-form">
             <?php wp_nonce_field( 'dm_lead_form', 'dm_lead_form_nonce' ); ?>
+            <input type="hidden" name="dm_ref_user" value="<?php echo isset( $_GET['ref'] ) ? esc_attr( sanitize_text_field( wp_unslash( $_GET['ref'] ) ) ) : ''; ?>">
             <p>
                 <label for="dm_name"><?php _e( 'Your Name', 'deals-manager' ); ?></label>
                 <input type="text" name="dm_name" id="dm_name" required />
@@ -73,18 +76,29 @@ class Deals_Manager_Shortcodes {
      * Handle the lead form submission.
      *
      * @since 1.0.0
+     * @return string Success or error message.
      */
     private function handle_form_submission() {
         $name = sanitize_text_field( $_POST['dm_name'] );
         $email = sanitize_email( $_POST['dm_email'] );
         $phone = sanitize_text_field( $_POST['dm_phone'] );
         $message = sanitize_textarea_field( $_POST['dm_message'] );
+        $ref_user_login = isset( $_POST['dm_ref_user'] ) ? sanitize_text_field( $_POST['dm_ref_user'] ) : '';
+
+        $author_id = 1; // Default to admin
+        if ( ! empty( $ref_user_login ) ) {
+            $user = get_user_by( 'login', $ref_user_login );
+            if ( $user ) {
+                $author_id = $user->ID;
+            }
+        }
 
         // Create a new Contact
         $contact_id = wp_insert_post( array(
             'post_title' => $name,
             'post_type' => 'contact',
             'post_status' => 'publish',
+            'post_author' => $author_id,
         ) );
 
         if ( $contact_id && ! is_wp_error( $contact_id ) ) {
@@ -98,17 +112,19 @@ class Deals_Manager_Shortcodes {
                 'post_content' => $message,
                 'post_type' => 'deal',
                 'post_status' => 'publish',
+                'post_author' => $author_id,
             ) );
 
             if ( $deal_id && ! is_wp_error( $deal_id ) ) {
                 update_post_meta( $deal_id, '_deal_stage', 'lead' );
                 update_post_meta( $deal_id, '_deal_related_contact', $contact_id );
-                echo '<p class="dm-success">' . __( 'Thank you for your submission!', 'deals-manager' ) . '</p>';
+                update_post_meta( $deal_id, '_deal_owner', $author_id );
+                return '<p class="dm-success">' . __( 'Thank you for your submission!', 'deals-manager' ) . '</p>';
             } else {
-                echo '<p class="dm-error">' . __( 'There was an error creating the deal.', 'deals-manager' ) . '</p>';
+                return '<p class="dm-error">' . __( 'There was an error creating the deal.', 'deals-manager' ) . '</p>';
             }
         } else {
-            echo '<p class="dm-error">' . __( 'There was an error creating the contact.', 'deals-manager' ) . '</p>';
+            return '<p class="dm-error">' . __( 'There was an error creating the contact.', 'deals-manager' ) . '</p>';
         }
     }
 }

@@ -75,6 +75,25 @@ get_header(); ?>
         border-top: 2px solid #eee;
         font-weight: bold;
     }
+    .dm-print-button {
+        display: block;
+        width: 150px;
+        margin: 20px auto;
+        padding: 10px;
+        text-align: center;
+        background: #eee;
+        border: 1px solid #ccc;
+        cursor: pointer;
+    }
+    @media print {
+        .dm-print-button, .site-header, .site-footer, #wpadminbar {
+            display: none;
+        }
+        .invoice-box {
+            box-shadow: none;
+            border: 0;
+        }
+    }
 </style>
 
 <div id="primary" class="content-area">
@@ -94,6 +113,7 @@ get_header(); ?>
             $company_address = $related_company_id ? get_post_meta( $related_company_id, '_company_address', true ) : '';
 
             ?>
+            <a href="#" class="dm-print-button" onclick="window.print(); return false;"><?php _e( 'Print Invoice', 'deals-manager' ); ?></a>
             <div class="invoice-box">
                 <table>
                     <tr class="top">
