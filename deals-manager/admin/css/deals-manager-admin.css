@@ -1,0 +1,37 @@
+/* Add some spacing and clarity to our meta boxes */
+.post-type-deal #postbox-container-2 .meta-box-sortables,
+.post-type-contact #postbox-container-2 .meta-box-sortables,
+.post-type-company #postbox-container-2 .meta-box-sortables,
+.post-type-task #postbox-container-2 .meta-box-sortables,
+.post-type-invoice #postbox-container-2 .meta-box-sortables {
+    display: grid;
+    gap: 20px;
+}
+
+#deal_details .inside,
+#contact_details .inside,
+#company_details .inside,
+#task_details .inside,
+#invoice_details .inside {
+    display: grid;
+    gap: 10px;
+}
+
+#deal_details .inside p,
+#contact_details .inside p,
+#company_details .inside p,
+#task_details .inside p,
+#invoice_details .inside p {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    align-items: center;
+    margin: 0;
+}
+
+#deal_details .inside p label,
+#contact_details .inside p label,
+#company_details .inside p label,
+#task_details .inside p label,
+#invoice_details .inside p label {
+    font-weight: bold;
+}

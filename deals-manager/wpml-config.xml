@@ -1,0 +1,38 @@
+<wpml-config>
+    <custom-fields>
+        <!-- Deal Fields -->
+        <custom-field action="translate">_deal_value</custom-field>
+        <custom-field action="copy">_deal_owner</custom-field>
+        <custom-field action="translate">_deal_priority</custom-field>
+        <custom-field action="translate">_deal_stage</custom-field>
+
+        <!-- Contact Fields -->
+        <custom-field action="translate">_contact_email</custom-field>
+        <custom-field action="translate">_contact_phone</custom-field>
+        <custom-field action="translate">_contact_job_title</custom-field>
+
+        <!-- Company Fields -->
+        <custom-field action="translate">_company_website</custom-field>
+        <custom-field action="translate">_company_address</custom-field>
+
+        <!-- Task Fields -->
+        <custom-field action="copy">_task_due_date</custom-field>
+        <custom-field action="translate">_task_status</custom-field>
+
+        <!-- Invoice Fields -->
+        <custom-field action="translate">_invoice_amount</custom-field>
+        <custom-field action="translate">_invoice_status</custom-field>
+        <custom-field action="copy">_invoice_due_date</custom-field>
+        <custom-field action="translate">_invoice_line_items</custom-field>
+    </custom-fields>
+    <custom-post-types>
+        <custom-post-type action="translate">deal</custom-post-type>
+        <custom-post-type action="translate">contact</custom-post-type>
+        <custom-post-type action="translate">company</custom-post-type>
+        <custom-post-type action="translate">task</custom-post-type>
+        <custom-post-type action="translate">invoice</custom-post-type>
+    </custom-post-types>
+    <taxonomies>
+        <taxonomy action="translate">d_group</taxonomy>
+    </taxonomies>
+</wpml-config>
