@@ -76,6 +76,8 @@ class Deals_Manager_Admin {
 	 * @param    string $hook The current admin page.
 	 */
 	public function enqueue_scripts( $hook ) {
+		$screen = get_current_screen();
+
 		// Load Kanban JS only on the pipeline page.
 		if ( 'deals-manager_page_deals-manager-pipeline' === $hook ) {
 			wp_enqueue_script( $this->plugin_name . '-kanban', plugin_dir_url( __FILE__ ) . 'js/deals-manager-kanban.js', array( 'jquery', 'jquery-ui-sortable' ), $this->version, true );
@@ -167,8 +169,6 @@ class Deals_Manager_Admin {
 			);
 		}
 
-		$screen = get_current_screen();
-
 		// Load Invoice JS only on the invoice edit page.
 		if ( $screen && 'invoice' === $screen->id ) {
 			wp_enqueue_script( $this->plugin_name . '-invoice', plugin_dir_url( __FILE__ ) . 'js/deals-manager-invoice.js', array( 'jquery', 'wp-util' ), $this->version, true );
@@ -180,7 +180,7 @@ class Deals_Manager_Admin {
 		}
 
 		// Load Print Deals JS only on the print deals page.
-		if ( 'deals-manager_page_deals-manager-print-deals' === $hook ) {
+		if ( $screen && 'deals-manager_page_deals-manager-print-deals' === $screen->id ) {
 			wp_enqueue_script( $this->plugin_name . '-print-deals', plugin_dir_url( __FILE__ ) . 'js/deals-manager-print.js', array( 'jquery' ), $this->version, true );
 			wp_localize_script(
 				$this->plugin_name . '-print-deals',
@@ -188,6 +188,20 @@ class Deals_Manager_Admin {
 				array(
 					'ajax_url' => admin_url( 'admin-ajax.php' ),
 					'nonce'    => wp_create_nonce( 'dm-print-deals-nonce' ),
+				)
+			);
+		}
+
+		// Load Lead Referrals JS only on the lead referrals report page.
+		if ( $screen && 'deals-manager_page_deals-manager-lead-referrals' === $screen->id ) {
+			wp_enqueue_script( $this->plugin_name . '-lead-referrals', plugin_dir_url( __FILE__ ) . 'js/deals-manager-lead-referrals.js', array( 'jquery' ), $this->version, true );
+			wp_localize_script(
+				$this->plugin_name . '-lead-referrals',
+				'lead_referrals_ajax',
+				array(
+					'ajax_url'       => admin_url( 'admin-ajax.php' ),
+					'admin_post_url' => admin_url( 'admin-post.php' ),
+					'nonce'          => wp_create_nonce( 'dm-lead-referrals-nonce' ),
 				)
 			);
 		}
@@ -564,6 +578,71 @@ class Deals_Manager_Admin {
 	}
 
 	/**
+	 * Add the lead referrals report page to the admin menu.
+	 *
+	 * @since 1.0.0
+	 */
+	public function add_lead_referrals_report_page() {
+		add_submenu_page(
+			'deals-manager',
+			__( 'Lead Referrals Report', 'deals-manager' ),
+			__( 'Lead Referrals', 'deals-manager' ),
+			'edit_deals',
+			'deals-manager-lead-referrals',
+			array( $this, 'render_lead_referrals_report_page' )
+		);
+	}
+
+	/**
+	 * Render the lead referrals report page.
+	 *
+	 * @since 1.0.0
+	 */
+	public function render_lead_referrals_report_page() {
+		?>
+		<div class="wrap">
+			<h1><?php _e( 'Lead Referrals Report', 'deals-manager' ); ?></h1>
+			<p><?php _e( 'Select a user and a date range to view the leads they referred.', 'deals-manager' ); ?></p>
+			<form id="lead-referrals-form">
+				<table class="form-table">
+					<tbody>
+						<tr>
+							<th scope="row"><label for="user_id"><?php _e( 'User', 'deals-manager' ); ?></label></th>
+							<td>
+								<?php
+								wp_dropdown_users(
+									array(
+										'show_option_none' => 'All Users',
+										'name'             => 'user_id',
+									)
+								);
+								?>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="start_date"><?php _e( 'Start Date', 'deals-manager' ); ?></label></th>
+							<td><input type="date" name="start_date" id="start_date" /></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="end_date"><?php _e( 'End Date', 'deals-manager' ); ?></label></th>
+							<td><input type="date" name="end_date" id="end_date" /></td>
+						</tr>
+					</tbody>
+				</table>
+				<?php submit_button( __( 'Generate Report', 'deals-manager' ), 'primary', 'generate-lead-referrals-report' ); ?>
+			</form>
+			<div id="lead-referrals-report-actions" style="margin-top: 20px; display: none;">
+				<button id="print-lead-referrals-report" class="button"><?php _e( 'Print', 'deals-manager' ); ?></button>
+				<a href="#" id="export-lead-referrals-report" class="button"><?php _e( 'Export to CSV', 'deals-manager' ); ?></a>
+			</div>
+			<div id="lead-referrals-report-container">
+				<!-- Report will be loaded here via AJAX -->
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Render the print deals page.
 	 *
 	 * @since 1.0.0
@@ -749,114 +828,6 @@ class Deals_Manager_Admin {
 	}
 
 	/**
-	 * Add an export button to the CPT list tables.
-	 *
-	 * @since 1.0.0
-	 * @param string $which 'top' or 'bottom'.
-	 */
-	public function add_export_button( $which ) {
-		if ( 'top' !== $which ) {
-			return;
-		}
-
-		$screen = get_current_screen();
-		$cpts   = array( 'deal', 'contact', 'company' );
-
-		if ( $screen && in_array( $screen->post_type, $cpts, true ) ) {
-			$export_url = add_query_arg(
-				array(
-					'export'    => 'csv',
-					'post_type' => $screen->post_type,
-					'nonce'     => wp_create_nonce( 'dm-export-nonce' ),
-				)
-			);
-			?>
-			<div class="alignleft actions">
-				<a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php _e( 'Export to CSV', 'deals-manager' ); ?></a>
-			</div>
-			<?php
-		}
-	}
-
-	/**
-	 * Handle the CSV export request.
-	 *
-	 * @since 1.0.0
-	 */
-	public function handle_csv_export() {
-		if ( ! isset( $_GET['export'] ) || 'csv' !== $_GET['export'] ) {
-			return;
-		}
-
-		if ( ! isset( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_key( $_GET['nonce'] ), 'dm-export-nonce' ) ) {
-			return;
-		}
-
-		if ( ! isset( $_GET['post_type'] ) ) {
-			return;
-		}
-
-		$post_type = sanitize_text_field( wp_unslash( $_GET['post_type'] ) );
-		$cpts      = array( 'deal', 'contact', 'company' );
-
-		if ( ! in_array( $post_type, $cpts, true ) ) {
-			return;
-		}
-
-		$post_type_object = get_post_type_object( $post_type );
-		if ( ! current_user_can( $post_type_object->cap->edit_posts ) ) {
-			wp_die( esc_html__( 'You do not have permission to export this data.', 'deals-manager' ) );
-		}
-
-		$args = array(
-			'post_type'      => $post_type,
-			'posts_per_page' => -1,
-			'post_status'    => 'publish',
-		);
-		$posts = get_posts( $args );
-
-		if ( ! $posts ) {
-			return;
-		}
-
-		$filename = $post_type . 's-export-' . date( 'Y-m-d' ) . '.csv';
-
-		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-
-		$output = fopen( 'php://output', 'w' );
-
-		// Add headers.
-		$first_post_meta = get_post_meta( $posts[0]->ID );
-		$headers         = array( 'ID', 'Title', 'Author', 'Date' );
-		$meta_keys       = array();
-		foreach ( $first_post_meta as $key => $value ) {
-			if ( '_' !== $key[0] ) {
-				$headers[]   = $key;
-				$meta_keys[] = $key;
-			}
-		}
-		fputcsv( $output, $headers );
-
-		// Add data.
-		foreach ( $posts as $post ) {
-			$row = array(
-				$post->ID,
-				$post->post_title,
-				get_the_author_meta( 'display_name', $post->post_author ),
-				$post->post_date,
-			);
-			foreach ( $meta_keys as $key ) {
-				$row[] = get_post_meta( $post->ID, $key, true );
-			}
-			fputcsv( $output, $row );
-		}
-
-		fclose( $output );
-		die();
-	}
-
-	/**
 	 * Handle the sample data installation request.
 	 *
 	 * @since 1.0.0
@@ -876,11 +847,6 @@ class Deals_Manager_Admin {
 		exit;
 	}
 
-	/**
-	 * Handle the AJAX request for printing deals.
-	 *
-	 * @since 1.0.0
-	 */
 	public function handle_print_deals_ajax() {
 		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['nonce'] ), 'dm-print-deals-nonce' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'deals-manager' ) ) );
@@ -987,5 +953,172 @@ class Deals_Manager_Admin {
 		<?php
 		$html = ob_get_clean();
 		wp_send_json_success( array( 'html' => $html ) );
+	}
+
+	/**
+	 * Handle the AJAX request for the lead referrals report.
+	 *
+	 * @since 1.0.0
+	 */
+	public function dm_generate_lead_referrals_report() {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['nonce'] ), 'dm-lead-referrals-nonce' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'deals-manager' ) ) );
+		}
+
+		if ( ! current_user_can( 'edit_deals' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to view this page.', 'deals-manager' ) ) );
+		}
+
+		$start_date = isset( $_POST['start_date'] ) ? sanitize_text_field( wp_unslash( $_POST['start_date'] ) ) : '';
+		$end_date   = isset( $_POST['end_date'] ) ? sanitize_text_field( wp_unslash( $_POST['end_date'] ) ) : '';
+		$user_id    = isset( $_POST['user_id'] ) ? (int) $_POST['user_id'] : 0;
+
+		$args = array(
+			'post_type'      => 'deal',
+			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'meta_query'     => array(
+				array(
+					'key'   => '_deal_stage',
+					'value' => 'lead',
+				),
+			),
+		);
+
+		if ( $user_id ) {
+			$args['author'] = $user_id;
+		}
+
+		if ( $start_date || $end_date ) {
+			$args['date_query'] = array(
+				'inclusive' => true,
+			);
+			if ( $start_date ) {
+				$args['date_query']['after'] = $start_date;
+			}
+			if ( $end_date ) {
+				$args['date_query']['before'] = $end_date;
+			}
+		}
+
+		$deals = new WP_Query( $args );
+
+		ob_start();
+		?>
+		<table class="wp-list-table widefat fixed striped">
+			<thead>
+				<tr>
+					<th><?php _e( 'Deal', 'deals-manager' ); ?></th>
+					<th><?php _e( 'Referred By', 'deals-manager' ); ?></th>
+					<th><?php _e( 'Contact', 'deals-manager' ); ?></th>
+					<th><?php _e( 'Date', 'deals-manager' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php if ( $deals->have_posts() ) : ?>
+					<?php while ( $deals->have_posts() ) : $deals->the_post(); ?>
+						<?php
+						$referrer_id = get_the_author_meta( 'ID' );
+						$referrer_info = get_userdata( $referrer_id );
+						$contact_id = get_post_meta( get_the_ID(), '_deal_related_contact', true );
+						?>
+						<tr>
+							<td><a href="<?php echo esc_url( get_edit_post_link() ); ?>"><?php the_title(); ?></a></td>
+							<td><?php echo esc_html( $referrer_info->display_name ); ?></td>
+							<td>
+								<?php if ( $contact_id ) : ?>
+									<a href="<?php echo esc_url( get_edit_post_link( $contact_id ) ); ?>"><?php echo esc_html( get_the_title( $contact_id ) ); ?></a>
+								<?php endif; ?>
+							</td>
+							<td><?php echo get_the_date(); ?></td>
+						</tr>
+					<?php endwhile; ?>
+					<?php wp_reset_postdata(); ?>
+				<?php else : ?>
+					<tr>
+						<td colspan="4"><?php _e( 'No leads found matching your criteria.', 'deals-manager' ); ?></td>
+					</tr>
+				<?php endif; ?>
+			</tbody>
+		</table>
+		<?php
+		$html = ob_get_clean();
+		wp_send_json_success( array( 'html' => $html ) );
+	}
+
+	/**
+	 * Handle the CSV export request for the lead referrals report.
+	 *
+	 * @since 1.0.0
+	 */
+	public function handle_lead_referrals_export() {
+		if ( ! isset( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_key( $_GET['nonce'] ), 'dm-lead-referrals-nonce' ) ) {
+			wp_die( esc_html__( 'Invalid nonce.', 'deals-manager' ) );
+		}
+
+		if ( ! current_user_can( 'edit_deals' ) ) {
+			wp_die( esc_html__( 'You do not have permission to export this data.', 'deals-manager' ) );
+		}
+
+		$start_date = isset( $_GET['start_date'] ) ? sanitize_text_field( wp_unslash( $_GET['start_date'] ) ) : '';
+		$end_date   = isset( $_GET['end_date'] ) ? sanitize_text_field( wp_unslash( $_GET['end_date'] ) ) : '';
+		$user_id    = isset( $_GET['user_id'] ) ? (int) $_GET['user_id'] : 0;
+
+		$args = array(
+			'post_type'      => 'deal',
+			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'meta_query'     => array(
+				array(
+					'key'   => '_deal_stage',
+					'value' => 'lead',
+				),
+			),
+		);
+
+		if ( $user_id ) {
+			$args['author'] = $user_id;
+		}
+
+		if ( $start_date || $end_date ) {
+			$args['date_query'] = array(
+				'inclusive' => true,
+			);
+			if ( $start_date ) {
+				$args['date_query']['after'] = $start_date;
+			}
+			if ( $end_date ) {
+				$args['date_query']['before'] = $end_date;
+			}
+		}
+
+		$deals = new WP_Query( $args );
+
+		if ( ! $deals->have_posts() ) {
+			wp_die( esc_html__( 'No leads found matching your criteria.', 'deals-manager' ) );
+		}
+
+		$filename = 'lead-referrals-export-' . date( 'Y-m-d' ) . '.csv';
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+
+		$output = fopen( 'php://output', 'w' );
+
+		fputcsv( $output, array( 'Deal', 'Referred By', 'Contact', 'Date' ) );
+
+		while ( $deals->have_posts() ) {
+			$deals->the_post();
+			$referrer_id = get_the_author_meta( 'ID' );
+			$referrer_info = get_userdata( $referrer_id );
+			$contact_id = get_post_meta( get_the_ID(), '_deal_related_contact', true );
+			$contact_title = $contact_id ? get_the_title( $contact_id ) : '';
+
+			fputcsv( $output, array( get_the_title(), $referrer_info->display_name, $contact_title, get_the_date() ) );
+		}
+		wp_reset_postdata();
+
+		fclose( $output );
+		die();
 	}
 }
