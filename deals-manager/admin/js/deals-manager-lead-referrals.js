@@ -47,26 +47,10 @@
         $('#export-lead-referrals-report').on('click', function(e) {
             e.preventDefault();
             var data = form.serialize();
-            data += '&action=dm_export_lead_referrals_csv';
-            data += '&nonce=' + lead_referrals_ajax.nonce;
-
-            $.post(lead_referrals_ajax.ajax_url, data, function(response) {
-                if (response.success) {
-                    var blob = new Blob([response.data.csv], { type: 'text/csv;charset=utf-8;' });
-                    var link = document.createElement("a");
-                    var url = URL.createObjectURL(blob);
-                    link.setAttribute("href", url);
-                    link.setAttribute("download", "lead-referrals-report.csv");
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } else {
-                    alert('Error: ' + response.data.message);
-                }
-            }).fail(function() {
-                alert('An unexpected error occurred. Please try again.');
-            });
+            // Point to admin-post.php for direct file download.
+            // The action for our admin-post handler is 'dm_export_lead_referrals'.
+            var url = lead_referrals_ajax.admin_post_url + '?action=dm_export_lead_referrals&nonce=' + lead_referrals_ajax.nonce + '&' + data;
+            window.location.href = url;
         });
     });
 
