@@ -42,32 +42,34 @@ class Deals_Manager_Shortcodes {
         }
 
         ob_start();
-
-        echo $message; // Display success or error message
         ?>
-        <form action="" method="post" id="dm-lead-form">
-            <?php wp_nonce_field( 'dm_lead_form', 'dm_lead_form_nonce' ); ?>
-            <input type="hidden" name="dm_ref_user" value="<?php echo isset( $_GET['ref'] ) ? esc_attr( sanitize_text_field( wp_unslash( $_GET['ref'] ) ) ) : ''; ?>">
-            <p>
-                <label for="dm_name"><?php _e( 'Your Name', 'deals-manager' ); ?></label>
-                <input type="text" name="dm_name" id="dm_name" required />
-            </p>
-            <p>
-                <label for="dm_email"><?php _e( 'Your Email', 'deals-manager' ); ?></label>
-                <input type="email" name="dm_email" id="dm_email" required />
-            </p>
-            <p>
-                <label for="dm_phone"><?php _e( 'Your Phone', 'deals-manager' ); ?></label>
-                <input type="text" name="dm_phone" id="dm_phone" />
-            </p>
-            <p>
-                <label for="dm_message"><?php _e( 'Message', 'deals-manager' ); ?></label>
-                <textarea name="dm_message" id="dm_message" rows="5"></textarea>
-            </p>
-            <p>
-                <input type="submit" name="dm_lead_form_submit" value="<?php _e( 'Send', 'deals-manager' ); ?>" />
-            </p>
-        </form>
+        <div class="dm-lead-form-container">
+            <h3><?php _e( 'Contact Us', 'deals-manager' ); ?></h3>
+            <?php echo $message; // Display success or error message ?>
+            <form action="" method="post" id="dm-lead-form">
+                <?php wp_nonce_field( 'dm_lead_form', 'dm_lead_form_nonce' ); ?>
+                <input type="hidden" name="dm_ref_user" value="<?php echo isset( $_GET['ref'] ) ? esc_attr( sanitize_text_field( wp_unslash( $_GET['ref'] ) ) ) : ''; ?>">
+                <div class="form-row">
+                    <label for="dm_name"><?php _e( 'Your Name', 'deals-manager' ); ?></label>
+                    <input type="text" name="dm_name" id="dm_name" required />
+                </div>
+                <div class="form-row">
+                    <label for="dm_email"><?php _e( 'Your Email', 'deals-manager' ); ?></label>
+                    <input type="email" name="dm_email" id="dm_email" required />
+                </div>
+                <div class="form-row">
+                    <label for="dm_phone"><?php _e( 'Your Phone', 'deals-manager' ); ?></label>
+                    <input type="text" name="dm_phone" id="dm_phone" />
+                </div>
+                <div class="form-row">
+                    <label for="dm_message"><?php _e( 'Message', 'deals-manager' ); ?></label>
+                    <textarea name="dm_message" id="dm_message" rows="5"></textarea>
+                </div>
+                <div class="form-row">
+                    <input type="submit" name="dm_lead_form_submit" class="dm-submit-button" value="<?php _e( 'Send Inquiry', 'deals-manager' ); ?>" />
+                </div>
+            </form>
+        </div>
         <?php
         return ob_get_clean();
     }
@@ -119,12 +121,12 @@ class Deals_Manager_Shortcodes {
                 update_post_meta( $deal_id, '_deal_stage', 'lead' );
                 update_post_meta( $deal_id, '_deal_related_contact', $contact_id );
                 update_post_meta( $deal_id, '_deal_owner', $author_id );
-                return '<p class="dm-success">' . __( 'Thank you for your submission!', 'deals-manager' ) . '</p>';
+                return '<div class="dm-lead-form-message success">' . __( 'Thank you for your submission!', 'deals-manager' ) . '</div>';
             } else {
-                return '<p class="dm-error">' . __( 'There was an error creating the deal.', 'deals-manager' ) . '</p>';
+                return '<div class="dm-lead-form-message error">' . __( 'There was an error creating the deal.', 'deals-manager' ) . '</div>';
             }
         } else {
-            return '<p class="dm-error">' . __( 'There was an error creating the contact.', 'deals-manager' ) . '</p>';
+            return '<div class="dm-lead-form-message error">' . __( 'There was an error creating the contact.', 'deals-manager' ) . '</div>';
         }
     }
 }

@@ -1,37 +1,107 @@
-/* Add some spacing and clarity to our meta boxes */
-.post-type-deal #postbox-container-2 .meta-box-sortables,
-.post-type-contact #postbox-container-2 .meta-box-sortables,
-.post-type-company #postbox-container-2 .meta-box-sortables,
-.post-type-task #postbox-container-2 .meta-box-sortables,
-.post-type-invoice #postbox-container-2 .meta-box-sortables {
-    display: grid;
-    gap: 20px;
+/*
+ * Deals Manager - Admin-Specific CSS
+ */
+
+/* Main wrapper for our admin pages for consistent spacing */
+.dm-wrap {
+    margin: 20px 20px 20px 0;
 }
 
+/* Standardize form tables inside meta boxes and on settings pages */
+.dm-form-table {
+    width: 100%;
+}
+
+.dm-form-table th {
+    width: 150px;
+    padding: 15px 10px 15px 0;
+    vertical-align: top;
+    font-weight: 600;
+}
+
+.dm-form-table td {
+    padding: 10px 0;
+    vertical-align: top;
+}
+
+.dm-form-table input[type="text"],
+.dm-form-table input[type="email"],
+.dm-form-table input[type="number"],
+.dm-form-table input[type="url"],
+.dm-form-table select,
+.dm-form-table textarea {
+    width: 100%;
+    max-width: 400px;
+}
+
+.dm-form-table .description {
+    color: #646970;
+    font-style: italic;
+}
+
+/* Make our meta boxes look cleaner */
 #deal_details .inside,
 #contact_details .inside,
 #company_details .inside,
 #task_details .inside,
 #invoice_details .inside {
-    display: grid;
-    gap: 10px;
-}
-
-#deal_details .inside p,
-#contact_details .inside p,
-#company_details .inside p,
-#task_details .inside p,
-#invoice_details .inside p {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    align-items: center;
     margin: 0;
+    padding: 0;
 }
 
-#deal_details .inside p label,
-#contact_details .inside p label,
-#company_details .inside p label,
-#task_details .inside p label,
-#invoice_details .inside p label {
-    font-weight: bold;
+/* Reports Page Improvements */
+#reports-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+.report-widget {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 20px;
+}
+.report-widget h2 {
+    margin-top: 0;
+    font-size: 16px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.report-widget table {
+    width: 100%;
+}
+.report-widget ul {
+    margin: 0;
+    list-style: none;
+}
+.report-widget ul li {
+    padding: 5px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.report-widget ul li:last-child {
+    border-bottom: none;
+}
+.report-widget ul li strong {
+    display: inline-block;
+    width: 200px;
+}
+
+/* Invoice Line Items Repeater */
+#dm-line-items-container .line-item {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 30px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+#dm-line-items-container .line-item input {
+    width: 100%;
+}
+#dm-add-line-item {
+    margin-top: 10px;
 }
