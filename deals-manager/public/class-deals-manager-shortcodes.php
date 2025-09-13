@@ -95,19 +95,36 @@ class Deals_Manager_Shortcodes {
             }
         }
 
-        // Create a new Contact
-        $contact_id = wp_insert_post( array(
-            'post_title' => $name,
+        // Check if contact with this email already exists
+        $existing_contacts = get_posts( array(
             'post_type' => 'contact',
-            'post_status' => 'publish',
-            'post_author' => $author_id,
+            'meta_key' => '_contact_email',
+            'meta_value' => $email,
+            'posts_per_page' => 1,
+            'fields' => 'ids', // Only get the ID
         ) );
 
-        if ( $contact_id && ! is_wp_error( $contact_id ) ) {
-            update_post_meta( $contact_id, '_contact_email', $email );
-            update_post_meta( $contact_id, '_contact_phone', $phone );
+        if ( ! empty( $existing_contacts ) ) {
+            // Contact exists, use the existing ID
+            $contact_id = $existing_contacts[0];
+        } else {
+            // Contact does not exist, create a new one
+            $contact_id = wp_insert_post( array(
+                'post_title' => $name,
+                'post_type' => 'contact',
+                'post_status' => 'publish',
+                'post_author' => $author_id,
+            ) );
 
-            // Create a new Deal
+            if ( $contact_id && ! is_wp_error( $contact_id ) ) {
+                update_post_meta( $contact_id, '_contact_email', $email );
+                update_post_meta( $contact_id, '_contact_phone', $phone );
+            }
+        }
+
+        // Now, proceed with creating the deal, using either the new or existing contact ID
+        if ( $contact_id && ! is_wp_error( $contact_id ) ) {
+            // Create a new Deal associated with the contact
             $deal_title = sprintf( 'New Lead from %s', $name );
             $deal_id = wp_insert_post( array(
                 'post_title' => $deal_title,
@@ -126,6 +143,7 @@ class Deals_Manager_Shortcodes {
                 return '<div class="dm-lead-form-message error">' . __( 'There was an error creating the deal.', 'deals-manager' ) . '</div>';
             }
         } else {
+            // This case handles if the new contact creation failed.
             return '<div class="dm-lead-form-message error">' . __( 'There was an error creating the contact.', 'deals-manager' ) . '</div>';
         }
     }
