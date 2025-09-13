@@ -36,18 +36,26 @@ class Deals_Manager_Shortcodes {
      * @return string The form HTML.
      */
     public function render_lead_form( $atts ) {
-        $message = '';
-        if ( isset( $_POST['dm_lead_form_submit'] ) && isset( $_POST['dm_lead_form_nonce'] ) && wp_verify_nonce( sanitize_key( $_POST['dm_lead_form_nonce'] ), 'dm_lead_form' ) ) {
-            $message = $this->handle_form_submission();
-        }
-
         ob_start();
         ?>
         <div class="dm-lead-form-container">
             <h3><?php _e( 'Contact Us', 'deals-manager' ); ?></h3>
-            <?php echo $message; // Display success or error message ?>
-            <form action="" method="post" id="dm-lead-form">
-                <?php wp_nonce_field( 'dm_lead_form', 'dm_lead_form_nonce' ); ?>
+
+            <?php
+            // Display success or error messages based on URL query parameter
+            if ( isset( $_GET['submission'] ) ) {
+                if ( 'success' === $_GET['submission'] ) {
+                    echo '<div class="dm-lead-form-message success">' . esc_html__( 'Thank you for your submission!', 'deals-manager' ) . '</div>';
+                } else {
+                    echo '<div class="dm-lead-form-message error">' . esc_html__( 'There was an error with your submission. Please try again.', 'deals-manager' ) . '</div>';
+                }
+            }
+            ?>
+
+            <form action="<?php echo esc_url( admin_url('admin-post.php') ); ?>" method="post" id="dm-lead-form">
+                <input type="hidden" name="action" value="dm_handle_lead_form">
+                <input type="hidden" name="dm_redirect_url" value="<?php echo esc_url( get_permalink() ); ?>">
+                <?php wp_nonce_field( 'dm_lead_form_nonce_action', 'dm_lead_form_nonce' ); ?>
                 <input type="hidden" name="dm_ref_user" value="<?php echo isset( $_GET['ref'] ) ? esc_attr( sanitize_text_field( wp_unslash( $_GET['ref'] ) ) ) : ''; ?>">
                 <div class="form-row">
                     <label for="dm_name"><?php _e( 'Your Name', 'deals-manager' ); ?></label>
@@ -75,12 +83,18 @@ class Deals_Manager_Shortcodes {
     }
 
     /**
-     * Handle the lead form submission.
+     * Handle the lead form submission via admin-post.
      *
      * @since 1.0.0
-     * @return string Success or error message.
      */
-    private function handle_form_submission() {
+    public function process_lead_form_submission() {
+        // Verify nonce
+        if ( ! isset( $_POST['dm_lead_form_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['dm_lead_form_nonce'] ), 'dm_lead_form_nonce_action' ) ) {
+            wp_die( 'Security check failed.' );
+        }
+
+        $redirect_url = isset( $_POST['dm_redirect_url'] ) ? esc_url_raw( $_POST['dm_redirect_url'] ) : home_url();
+
         $name = sanitize_text_field( $_POST['dm_name'] );
         $email = sanitize_email( $_POST['dm_email'] );
         $phone = sanitize_text_field( $_POST['dm_phone'] );
@@ -101,14 +115,12 @@ class Deals_Manager_Shortcodes {
             'meta_key' => '_contact_email',
             'meta_value' => $email,
             'posts_per_page' => 1,
-            'fields' => 'ids', // Only get the ID
+            'fields' => 'ids',
         ) );
 
         if ( ! empty( $existing_contacts ) ) {
-            // Contact exists, use the existing ID
             $contact_id = $existing_contacts[0];
         } else {
-            // Contact does not exist, create a new one
             $contact_id = wp_insert_post( array(
                 'post_title' => $name,
                 'post_type' => 'contact',
@@ -122,29 +134,31 @@ class Deals_Manager_Shortcodes {
             }
         }
 
-        // Now, proceed with creating the deal, using either the new or existing contact ID
-        if ( $contact_id && ! is_wp_error( $contact_id ) ) {
-            // Create a new Deal associated with the contact
-            $deal_title = sprintf( 'New Lead from %s', $name );
-            $deal_id = wp_insert_post( array(
-                'post_title' => $deal_title,
-                'post_content' => $message,
-                'post_type' => 'deal',
-                'post_status' => 'publish',
-                'post_author' => $author_id,
-            ) );
-
-            if ( $deal_id && ! is_wp_error( $deal_id ) ) {
-                update_post_meta( $deal_id, '_deal_stage', 'lead' );
-                update_post_meta( $deal_id, '_deal_related_contact', $contact_id );
-                update_post_meta( $deal_id, '_deal_owner', $author_id );
-                return '<div class="dm-lead-form-message success">' . __( 'Thank you for your submission!', 'deals-manager' ) . '</div>';
-            } else {
-                return '<div class="dm-lead-form-message error">' . __( 'There was an error creating the deal.', 'deals-manager' ) . '</div>';
-            }
-        } else {
-            // This case handles if the new contact creation failed.
-            return '<div class="dm-lead-form-message error">' . __( 'There was an error creating the contact.', 'deals-manager' ) . '</div>';
+        if ( ! $contact_id || is_wp_error( $contact_id ) ) {
+            wp_safe_redirect( add_query_arg( 'submission', 'error', $redirect_url ) );
+            exit;
         }
+
+        // Create a new Deal associated with the contact
+        $deal_title = sprintf( 'New Lead from %s', $name );
+        $deal_id = wp_insert_post( array(
+            'post_title' => $deal_title,
+            'post_content' => $message,
+            'post_type' => 'deal',
+            'post_status' => 'publish',
+            'post_author' => $author_id,
+        ) );
+
+        if ( ! $deal_id || is_wp_error( $deal_id ) ) {
+            wp_safe_redirect( add_query_arg( 'submission', 'error', $redirect_url ) );
+            exit;
+        }
+
+        update_post_meta( $deal_id, '_deal_stage', 'lead' );
+        update_post_meta( $deal_id, '_deal_related_contact', $contact_id );
+        update_post_meta( $deal_id, '_deal_owner', $author_id );
+
+        wp_safe_redirect( add_query_arg( 'submission', 'success', $redirect_url ) );
+        exit;
     }
 }

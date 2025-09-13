@@ -245,6 +245,9 @@ class Deals_Manager {
 
 		$plugin_shortcodes = new Deals_Manager_Shortcodes();
 
+		$this->loader->add_action( 'admin_post_nopriv_dm_handle_lead_form', $plugin_shortcodes, 'process_lead_form_submission' );
+		$this->loader->add_action( 'admin_post_dm_handle_lead_form', $plugin_shortcodes, 'process_lead_form_submission' );
+
 	}
 
 	/**
