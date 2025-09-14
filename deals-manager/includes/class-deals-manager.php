@@ -72,12 +72,25 @@ class Deals_Manager {
 
 		$this->load_dependencies();
 		$this->set_locale();
-		$this->define_cpt_hooks();
-		$this->define_taxonomy_hooks();
-		$this->define_cron_hooks();
-		$this->define_admin_hooks();
-		$this->define_public_hooks();
 
+		$license_handler = new Deals_Manager_License_Handler();
+		$this->define_license_hooks( $license_handler );
+
+		// Only load the rest of the plugin if the license is active
+		if ( Deals_Manager_License_Handler::is_license_active() ) {
+			$this->define_cpt_hooks();
+			$this->define_taxonomy_hooks();
+			$this->define_cron_hooks();
+			$this->define_admin_hooks();
+			$this->define_public_hooks();
+
+			// Add hooks for update checker
+			$this->loader->add_filter( 'pre_set_site_transient_update_plugins', $license_handler, 'check_for_updates' );
+			$this->loader->add_filter( 'plugins_api', array( $license_handler, 'plugin_info' ), 10, 3 );
+		} else {
+			// Add a hook for the admin notice if license is not active
+			$this->loader->add_action( 'admin_notices', $license_handler, 'show_license_notice' );
+		}
 	}
 
 	/**
@@ -177,6 +190,11 @@ class Deals_Manager {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/cpt/class-deals-manager-field-group-cpt.php';
 
+		/**
+		 * The class responsible for handling the license key.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-deals-manager-license-handler.php';
+
 		$this->loader = new Deals_Manager_Loader();
 
 	}
@@ -196,6 +214,19 @@ class Deals_Manager {
 
 		$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
 
+	}
+
+	/**
+	 * Register all of the hooks related to the license functionality.
+	 * These hooks need to run regardless of whether the license is active.
+	 *
+	 * @since    1.0.0
+	 * @access   private
+	 */
+	private function define_license_hooks( $plugin_license_handler ) {
+		$this->loader->add_action( 'admin_menu', $plugin_license_handler, 'add_license_page' );
+		$this->loader->add_action( 'admin_post_dm_activate_license', $plugin_license_handler, 'handle_activation' );
+		$this->loader->add_action( 'admin_post_dm_deactivate_license', $plugin_license_handler, 'handle_deactivation' );
 	}
 
 	/**
