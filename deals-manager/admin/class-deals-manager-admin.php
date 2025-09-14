@@ -54,6 +54,84 @@ class Deals_Manager_Admin {
 	}
 
 	/**
+	 * Add the settings page to the admin menu.
+	 *
+	 * @since 1.0.0
+	 */
+	public function add_settings_page() {
+		add_submenu_page(
+			'deals-manager',
+			__( 'Settings', 'deals-manager' ),
+			__( 'Settings', 'deals-manager' ),
+			'manage_options', // Only admins can access settings
+			'dm-settings',
+			array( $this, 'render_settings_page' )
+		);
+	}
+
+	/**
+	 * Render the settings page.
+	 *
+	 * @since 1.0.0
+	 */
+	public function render_settings_page() {
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<form action="options.php" method="post">
+				<?php
+				settings_fields( 'dm_settings_group' );
+				do_settings_sections( 'dm-settings' );
+				submit_button( __( 'Save Settings', 'deals-manager' ) );
+				?>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Register plugin settings.
+	 *
+	 * @since 1.0.0
+	 */
+	public function register_settings() {
+		register_setting( 'dm_settings_group', 'dm_settings_lead_form_page', 'absint' );
+
+		add_settings_section(
+			'dm_settings_section_general',
+			__( 'General Settings', 'deals-manager' ),
+			null,
+			'dm-settings'
+		);
+
+		add_settings_field(
+			'dm_settings_field_lead_form_page',
+			__( 'Lead Form Page', 'deals-manager' ),
+			array( $this, 'render_settings_field_lead_form_page' ),
+			'dm-settings',
+			'dm_settings_section_general'
+		);
+	}
+
+	/**
+	 * Render the Lead Form Page setting field.
+	 *
+	 * @since 1.0.0
+	 */
+	public function render_settings_field_lead_form_page() {
+		$option = get_option( 'dm_settings_lead_form_page' );
+		wp_dropdown_pages(
+			array(
+				'name'              => 'dm_settings_lead_form_page',
+				'selected'          => $option,
+				'show_option_none'  => __( '&mdash; Select a Page &mdash;', 'deals-manager' ),
+				'option_none_value' => '0',
+			)
+		);
+		echo '<p class="description">' . esc_html__( 'Select the page where you have placed the [dm_lead_form] shortcode. This is used to generate referral links for sales reps.', 'deals-manager' ) . '</p>';
+	}
+
+	/**
 	 * Register the stylesheets for the admin area.
 	 *
 	 * @since    1.0.0
