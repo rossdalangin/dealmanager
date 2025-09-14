@@ -35,6 +35,12 @@ class Deals_Manager_License_Handler {
     private $status_option_key = 'dm_license_status';
 
     /**
+     * The option name for enabling auto-updates.
+     * @var string
+     */
+    private $autoupdate_option_key = 'dm_enable_auto_updates';
+
+    /**
      * The URL of the license validation server.
      * @var string
      */
@@ -73,28 +79,36 @@ class Deals_Manager_License_Handler {
      * @since 1.0.0
      */
     public function render_license_page() {
-        $license_key = get_option( $this->option_key, '' );
+        $license_key    = get_option( $this->option_key, '' );
         $license_status = get_option( $this->status_option_key, 'inactive' );
+        $auto_updates   = get_option( $this->autoupdate_option_key, false );
         ?>
         <div class="wrap">
             <h1><?php _e( 'Deals Manager License Settings', 'deals-manager' ); ?></h1>
             <p><?php _e( 'Please enter your license key to activate the plugin and receive automatic updates.', 'deals-manager' ); ?></p>
 
             <?php
-            // Display feedback messages
             if ( isset( $_GET['status'] ) ) {
-                if ( 'success' === $_GET['status'] ) {
-                    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'License activated successfully!', 'deals-manager' ) . '</p></div>';
-                } elseif ( 'deactivated' === $_GET['status'] ) {
-                     echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'License deactivated successfully.', 'deals-manager' ) . '</p></div>';
-                } elseif ( 'error' === $_GET['status'] ) {
-                    echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Invalid license key or an error occurred. Please try again.', 'deals-manager' ) . '</p></div>';
+                $message = '';
+                switch ( $_GET['status'] ) {
+                    case 'success':
+                        $message = __( 'Settings saved and license activated successfully!', 'deals-manager' );
+                        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
+                        break;
+                    case 'deactivated':
+                        $message = __( 'License deactivated successfully.', 'deals-manager' );
+                        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
+                        break;
+                    case 'error':
+                        $message = __( 'Invalid license key or an error occurred. Please try again.', 'deals-manager' );
+                        echo '<div class="notice notice-error is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
+                        break;
                 }
             }
             ?>
 
             <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                <input type="hidden" name="action" value="dm_activate_license">
+                <input type="hidden" name="action" value="dm_save_license_settings">
                 <?php wp_nonce_field( 'dm_license_nonce', 'dm_license_nonce' ); ?>
 
                 <table class="form-table">
@@ -104,102 +118,101 @@ class Deals_Manager_License_Handler {
                                 <?php _e( 'License Key', 'deals-manager' ); ?>
                             </th>
                             <td>
-                                <input type="text" id="<?php echo esc_attr( $this->option_key ); ?>" name="<?php echo esc_attr( $this->option_key ); ?>" value="<?php echo esc_attr( $license_key ); ?>" class="regular-text" <?php echo ( 'active' === $license_status ) ? 'disabled' : ''; ?> />
+                                <input type="text" id="<?php echo esc_attr( $this->option_key ); ?>" name="<?php echo esc_attr( $this->option_key ); ?>" value="<?php echo esc_attr( $license_key ); ?>" class="regular-text" />
                                 <p class="description">
-                                    <?php _e( 'Enter your license key.', 'deals-manager' ); ?>
+                                    <?php _e( 'Enter your license key. To deactivate, clear this field and save.', 'deals-manager' ); ?>
                                 </p>
                             </td>
                         </tr>
-                        <?php if ( ! empty( $license_key ) ) : ?>
+                        <?php if ( 'active' === $license_status ) : ?>
                         <tr valign="top">
                             <th scope="row" valign="top">
                                 <?php _e( 'License Status', 'deals-manager' ); ?>
                             </th>
                             <td>
-                                <?php if ( 'active' === $license_status ) : ?>
-                                    <span style="color: green; font-weight: bold;"><?php _e( 'Active', 'deals-manager' ); ?></span>
-                                <?php else : ?>
-                                    <span style="color: red; font-weight: bold;"><?php _e( 'Inactive', 'deals-manager' ); ?></span>
-                                <?php endif; ?>
+                                <span style="color: green; font-weight: bold;"><?php _e( 'Active', 'deals-manager' ); ?></span>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                             <th scope="row" valign="top">
+                                <?php _e( 'Automatic Updates', 'deals-manager' ); ?>
+                            </th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="<?php echo esc_attr( $this->autoupdate_option_key ); ?>" value="1" <?php checked( $auto_updates, 1 ); ?> />
+                                    <?php _e( 'Enable auto-updates for this plugin', 'deals-manager' ); ?>
+                                </label>
                             </td>
                         </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
-                <p class="submit">
-                    <?php if ( 'active' === $license_status ) : ?>
-                        <button type="submit" name="submit" id="submit" class="button button-secondary" formaction="<?php echo esc_url( admin_url( 'admin-post.php?action=dm_deactivate_license' ) ); ?>"><?php _e( 'Deactivate License', 'deals-manager' ); ?></button>
-                    <?php else : ?>
-                        <input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Activate License', 'deals-manager' ); ?>">
-                    <?php endif; ?>
-                </p>
+                <?php submit_button( __( 'Save Changes', 'deals-manager' ) ); ?>
             </form>
         </div>
         <?php
     }
 
     /**
-     * Handle the license activation request.
+     * Handle saving all license settings.
      *
      * @since 1.0.0
      */
-    public function handle_activation() {
+    public function save_license_settings() {
         if ( ! isset( $_POST['dm_license_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['dm_license_nonce'] ), 'dm_license_nonce' ) ) {
             wp_die( 'Security check failed' );
         }
 
-        $license_key = isset( $_POST[ $this->option_key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $this->option_key ] ) ) : '';
         $redirect_url = admin_url( 'options-general.php?page=deals-manager-license' );
+        $new_license_key = isset( $_POST[ $this->option_key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $this->option_key ] ) ) : '';
+        $old_license_key = get_option( $this->option_key, '' );
 
-        if ( empty( $license_key ) ) {
-            wp_safe_redirect( add_query_arg( 'status', 'error', $redirect_url ) );
-            exit;
-        }
+        // Save auto-update setting
+        $auto_updates = isset( $_POST[ $this->autoupdate_option_key ] ) ? 1 : 0;
+        update_option( $this->autoupdate_option_key, $auto_updates );
 
-        $api_params = array(
-            'license_key' => $license_key,
-            'domain'      => home_url(),
-            'plugin_version' => '1.0.0', // This should be dynamic later
-        );
-
-        $response = wp_remote_post( $this->server_url, array( 'timeout' => 15, 'sslverify' => true, 'body' => $api_params ) );
-
-        if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
-            wp_safe_redirect( add_query_arg( 'status', 'error', $redirect_url ) );
-            exit;
-        }
-
-        $license_data = json_decode( wp_remote_retrieve_body( $response ) );
-
-        if ( $license_data && isset( $license_data->status ) && 'active' === $license_data->status ) {
-            update_option( $this->option_key, $license_key );
-            update_option( $this->status_option_key, 'active' );
-            wp_safe_redirect( add_query_arg( 'status', 'success', $redirect_url ) );
-        } else {
+        // Deactivation
+        if ( empty( $new_license_key ) && ! empty( $old_license_key ) ) {
             delete_option( $this->option_key );
             delete_option( $this->status_option_key );
-            wp_safe_redirect( add_query_arg( 'status', 'error', $redirect_url ) );
-        }
-        exit;
-    }
-
-    /**
-     * Handle the license deactivation request.
-     *
-     * @since 1.0.0
-     */
-    public function handle_deactivation() {
-        if ( ! isset( $_POST['dm_license_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['dm_license_nonce'] ), 'dm_license_nonce' ) ) {
-            wp_die( 'Security check failed' );
+            // A real implementation would also send a deactivation request to the server.
+            wp_safe_redirect( add_query_arg( 'status', 'deactivated', $redirect_url ) );
+            exit;
         }
 
-        // For now, deactivation is just local. A real implementation would
-        // send a request to the server to free up the license for another domain.
-        delete_option( $this->option_key );
-        delete_option( $this->status_option_key );
+        // Activation
+        if ( $new_license_key !== $old_license_key ) {
+            $api_params = array(
+                'license_key' => $new_license_key,
+                'domain'      => home_url(),
+                'plugin_version' => '1.0.0', // This should be dynamic later
+            );
 
-        $redirect_url = admin_url( 'options-general.php?page=deals-manager-license' );
-        wp_safe_redirect( add_query_arg( 'status', 'deactivated', $redirect_url ) );
+            $response = wp_remote_post( $this->server_url, array( 'timeout' => 15, 'sslverify' => true, 'body' => $api_params ) );
+
+            if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+                delete_option( $this->option_key );
+                delete_option( $this->status_option_key );
+                wp_safe_redirect( add_query_arg( 'status', 'error', $redirect_url ) );
+                exit;
+            }
+
+            $license_data = json_decode( wp_remote_retrieve_body( $response ) );
+
+            if ( $license_data && isset( $license_data->status ) && 'active' === $license_data->status ) {
+                update_option( $this->option_key, $new_license_key );
+                update_option( $this->status_option_key, 'active' );
+                wp_safe_redirect( add_query_arg( 'status', 'success', $redirect_url ) );
+            } else {
+                delete_option( $this->option_key );
+                delete_option( $this->status_option_key );
+                wp_safe_redirect( add_query_arg( 'status', 'error', $redirect_url ) );
+            }
+            exit;
+        }
+
+        // If we're here, the key hasn't changed, just save settings.
+        wp_safe_redirect( add_query_arg( 'status', 'success', $redirect_url ) );
         exit;
     }
 
@@ -243,6 +256,11 @@ class Deals_Manager_License_Handler {
      */
     public function check_for_updates( $transient ) {
         if ( empty( $transient->checked ) ) {
+            return $transient;
+        }
+
+        // Check if the license is active and if auto-updates are enabled.
+        if ( ! self::is_license_active() || ! get_option( $this->autoupdate_option_key, false ) ) {
             return $transient;
         }
 

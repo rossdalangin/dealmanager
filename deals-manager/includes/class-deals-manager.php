@@ -83,10 +83,6 @@ class Deals_Manager {
 			$this->define_cron_hooks();
 			$this->define_admin_hooks();
 			$this->define_public_hooks();
-
-			// Add hooks for update checker
-			$this->loader->add_filter( 'pre_set_site_transient_update_plugins', $license_handler, 'check_for_updates' );
-			$this->loader->add_filter( 'plugins_api', array( $license_handler, 'plugin_info' ), 10, 3 );
 		} else {
 			// Add a hook for the admin notice if license is not active
 			$this->loader->add_action( 'admin_notices', $license_handler, 'show_license_notice' );
@@ -225,8 +221,11 @@ class Deals_Manager {
 	 */
 	private function define_license_hooks( $plugin_license_handler ) {
 		$this->loader->add_action( 'admin_menu', $plugin_license_handler, 'add_license_page' );
-		$this->loader->add_action( 'admin_post_dm_activate_license', $plugin_license_handler, 'handle_activation' );
-		$this->loader->add_action( 'admin_post_dm_deactivate_license', $plugin_license_handler, 'handle_deactivation' );
+		$this->loader->add_action( 'admin_post_dm_save_license_settings', $plugin_license_handler, 'save_license_settings' );
+
+		// Add hooks for update checker
+		$this->loader->add_filter( 'pre_set_site_transient_update_plugins', $plugin_license_handler, 'check_for_updates' );
+		$this->loader->add_filter( 'plugins_api', array( $plugin_license_handler, 'plugin_info' ), 10, 3 );
 	}
 
 	/**
