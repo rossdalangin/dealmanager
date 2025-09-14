@@ -42,7 +42,7 @@ function dm_validate_license_key( WP_REST_Request $request ) {
         'VALID-KEY-12345' => array(
             'status'        => 'active',
             'expires'       => date('Y-m-d', strtotime('+1 year')),
-            'domains'       => array( 'http://customer-site-1.com' ), // List of activated domains
+            'domains'       => array( 'http://localhost/wordpress/' ), // List of activated domains
             'max_domains'   => 1,
         ),
         'EXPIRED-KEY-67890' => array(
