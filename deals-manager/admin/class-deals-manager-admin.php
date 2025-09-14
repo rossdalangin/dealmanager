@@ -816,6 +816,7 @@ class Deals_Manager_Admin {
 			<form id="lead-referrals-form">
 				<table class="form-table">
 					<tbody>
+						<?php if ( ! in_array( 'sales_rep', (array) wp_get_current_user()->roles, true ) ) : ?>
 						<tr>
 							<th scope="row"><label for="user_id"><?php _e( 'User', 'deals-manager' ); ?></label></th>
 							<td>
@@ -829,6 +830,7 @@ class Deals_Manager_Admin {
 								?>
 							</td>
 						</tr>
+						<?php endif; ?>
 						<tr>
 							<th scope="row"><label for="start_date"><?php _e( 'Start Date', 'deals-manager' ); ?></label></th>
 							<td><input type="date" name="start_date" id="start_date" /></td>
