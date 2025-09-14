@@ -585,6 +585,15 @@ class Deals_Manager_Admin {
 			'dashicons-businesswoman',
 			20
 		);
+
+		add_submenu_page(
+			'deals-manager',
+			__( 'Dashboard', 'deals-manager' ),
+			__( 'Dashboard', 'deals-manager' ),
+			'read',
+			'deals-manager', // Same slug as parent menu to make it the default
+			array( $this, 'render_dashboard_page' )
+		);
 	}
 
 	/**
