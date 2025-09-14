@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name:       Deals Manager
- * Plugin URI:        https://example.com/plugins/the-basics/
+ * Plugin URI:        https://wordpresstitans.com/plugins/deals-manager/
  * Description:       A complete Deals & Lead Management System + Sales CRM built to help businesses organize and track their sales pipeline, contacts, and tasks seamlessly inside WordPress.
  * Version:           1.0.0
- * Author:            Jules
- * Author URI:        https://example.com/
+ * Author:            Ross Dalangin
+ * Author URI:        https://wordpresstitans.com/
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       deals-manager

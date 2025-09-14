@@ -2,7 +2,7 @@
 /**
  * The file that defines the Task custom post type.
  *
- * @link       https://example.com
+ * @link       https://wordpresstitans.com
  * @since      1.0.0
  *
  * @package    Deals_Manager
@@ -15,7 +15,7 @@
  * @since      1.0.0
  * @package    Deals_Manager
  * @subpackage Deals_Manager/includes/cpt
- * @author     Jules <you@example.com>
+ * @author     Ross Dalangin
  */
 class Deals_Manager_Task_CPT {
 

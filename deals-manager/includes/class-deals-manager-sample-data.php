@@ -2,7 +2,7 @@
 /**
  * The file that defines the sample data installer for the plugin.
  *
- * @link       https://example.com
+ * @link       https://wordpresstitans.com
  * @since      1.0.0
  *
  * @package    Deals_Manager
@@ -15,7 +15,7 @@
  * @since      1.0.0
  * @package    Deals_Manager
  * @subpackage Deals_Manager/includes
- * @author     Jules <you@example.com>
+ * @author     Ross Dalangin
  */
 class Deals_Manager_Sample_Data {
 
@@ -37,7 +37,7 @@ class Deals_Manager_Sample_Data {
         $sales_rep_id = wp_insert_user( array(
             'user_login' => 'salesrep',
             'user_pass'  => wp_generate_password(),
-            'user_email' => 'salesrep@example.com',
+            'user_email' => 'salesrep@wordpresstitans.com',
             'first_name' => 'Sales',
             'last_name'  => 'Rep',
             'role'       => 'sales_rep',
@@ -46,7 +46,7 @@ class Deals_Manager_Sample_Data {
         $manager_id = wp_insert_user( array(
             'user_login' => 'manager',
             'user_pass'  => wp_generate_password(),
-            'user_email' => 'manager@example.com',
+            'user_email' => 'manager@wordpresstitans.com',
             'first_name' => 'Manager',
             'last_name'  => 'User',
             'role'       => 'manager',
@@ -54,21 +54,21 @@ class Deals_Manager_Sample_Data {
 
         // 2. Create companies
         $company1_id = wp_insert_post( array( 'post_title' => 'Acme Inc.', 'post_type' => 'company', 'post_status' => 'publish' ) );
-        update_post_meta( $company1_id, '_company_website', 'https://acme.example.com' );
+        update_post_meta( $company1_id, '_company_website', 'https://acme.wordpresstitans.com' );
         update_post_meta( $company1_id, '_company_address', "123 Main St\nAnytown, USA 12345" );
 
         $company2_id = wp_insert_post( array( 'post_title' => 'Stark Industries', 'post_type' => 'company', 'post_status' => 'publish' ) );
-        update_post_meta( $company2_id, '_company_website', 'https://stark.example.com' );
+        update_post_meta( $company2_id, '_company_website', 'https://stark.wordpresstitans.com' );
         update_post_meta( $company2_id, '_company_address', "1 Stark Tower\nNew York, NY 10001" );
 
         // 3. Create contacts
         $contact1_id = wp_insert_post( array( 'post_title' => 'John Doe', 'post_type' => 'contact', 'post_status' => 'publish' ) );
-        update_post_meta( $contact1_id, '_contact_email', 'john.doe@acme.example.com' );
+        update_post_meta( $contact1_id, '_contact_email', 'john.doe@acme.wordpresstitans.com' );
         update_post_meta( $contact1_id, '_contact_phone', '555-1111' );
         update_post_meta( $contact1_id, '_contact_job_title', 'CEO' );
 
         $contact2_id = wp_insert_post( array( 'post_title' => 'Jane Smith', 'post_type' => 'contact', 'post_status' => 'publish' ) );
-        update_post_meta( $contact2_id, '_contact_email', 'jane.smith@stark.example.com' );
+        update_post_meta( $contact2_id, '_contact_email', 'jane.smith@stark.wordpresstitans.com' );
         update_post_meta( $contact2_id, '_contact_phone', '555-2222' );
         update_post_meta( $contact2_id, '_contact_job_title', 'VP of Engineering' );
 

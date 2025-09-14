@@ -2,7 +2,7 @@
 /**
  * The template for displaying single invoices.
  *
- * @link       https://example.com
+ * @link       https://wordpresstitans.com
  * @since      1.0.0
  *
  * @package    Deals_Manager

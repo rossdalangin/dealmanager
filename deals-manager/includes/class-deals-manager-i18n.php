@@ -6,7 +6,7 @@
  * Loads and defines the internationalization files for this plugin
  * so that it is ready for translation.
  *
- * @link       https://example.com
+ * @link       https://wordpresstitans.com
  * @since      1.0.0
  *
  * @package    Deals_Manager
@@ -22,7 +22,7 @@
  * @since      1.0.0
  * @package    Deals_Manager
  * @subpackage Deals_Manager/includes
- * @author     Jules <you@example.com>
+ * @author     Ross Dalangin
  */
 class Deals_Manager_i18n {
 
