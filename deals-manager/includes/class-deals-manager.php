@@ -251,6 +251,8 @@ class Deals_Manager {
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_lead_referrals_report_page' );
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_settings_page' );
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_settings_page' );
+		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
 		$this->loader->add_action( 'wp_ajax_update_deal_stage', $plugin_admin, 'handle_update_deal_stage' );
 		$this->loader->add_action( 'wp_dashboard_setup', $plugin_admin, 'add_dashboard_widget' );
 		$this->loader->add_action( 'admin_post_dm_install_sample_data', $plugin_admin, 'handle_install_sample_data' );

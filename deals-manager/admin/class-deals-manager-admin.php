@@ -119,6 +119,12 @@ class Deals_Manager_Admin {
 				'posts_per_page' => -1,
 				'post_status'    => 'publish',
 			);
+
+			// Filter by author for sales reps
+			if ( in_array( 'sales_rep', (array) wp_get_current_user()->roles, true ) ) {
+				$args['author'] = get_current_user_id();
+			}
+
 			$deals = new WP_Query( $args );
 
 			if ( $deals->have_posts() ) {
@@ -512,48 +518,51 @@ class Deals_Manager_Admin {
 		$current_user = wp_get_current_user();
 		$role = (array) $current_user->roles;
 
-		if ( in_array( 'administrator', $role ) ) {
+		if ( in_array( 'administrator', $role, true ) ) {
 			$this->render_admin_dashboard();
-		} elseif ( in_array( 'manager', $role ) ) {
+		} elseif ( in_array( 'manager', $role, true ) ) {
 			$this->render_manager_dashboard();
-		} elseif ( in_array( 'sales_rep', $role ) ) {
+		} elseif ( in_array( 'sales_rep', $role, true ) ) {
 			$this->render_sales_rep_dashboard();
 		} else {
 			?>
 			<div class="wrap">
-				<h1><?php _e( 'Welcome to Deals Manager', 'deals-manager' ); ?></h1>
-				<p><?php _e( 'You do not have a designated role in the Deals Manager system.', 'deals-manager' ); ?></p>
+				<h1><?php esc_html_e( 'Welcome to Deals Manager', 'deals-manager' ); ?></h1>
+				<p><?php esc_html_e( 'You do not have a designated role in the Deals Manager system.', 'deals-manager' ); ?></p>
 			</div>
 			<?php
 		}
 	}
 
+	/**
+	 * Render the dashboard for Administrators.
+	 */
 	private function render_admin_dashboard() {
 		?>
 		<div class="wrap dm-wrap">
-			<h1><?php _e( 'Administrator Dashboard', 'deals-manager' ); ?></h1>
-			<p><?php _e( 'Welcome to the Deals Manager. As an administrator, you have full control over the system.', 'deals-manager' ); ?></p>
+			<h1><?php esc_html_e( 'Administrator Dashboard', 'deals-manager' ); ?></h1>
+			<p><?php esc_html_e( 'Welcome to the Deals Manager. As an administrator, you have full control over the system.', 'deals-manager' ); ?></p>
 
 			<div id="dashboard-widgets-wrap">
 				<div id="dashboard-widgets" class="metabox-holder">
 					<div class="postbox-container">
 						<div class="meta-box-sortables">
 							<div class="postbox">
-								<h2 class="hndle"><span><?php _e( 'Getting Started', 'deals-manager' ); ?></span></h2>
+								<h2 class="hndle"><span><?php esc_html_e( 'Getting Started', 'deals-manager' ); ?></span></h2>
 								<div class="inside">
-									<p><?php _e( 'Here are some quick steps to get started:', 'deals-manager' ); ?></p>
+									<p><?php esc_html_e( 'Here are some quick steps to get started:', 'deals-manager' ); ?></p>
 									<ul>
-										<li><strong>1. Configure Settings:</strong> <?php printf( '<a href="%s">%s</a>', esc_url( admin_url( 'admin.php?page=dm-settings' ) ), __( 'Go to Settings', 'deals-manager' ) ); ?> to set up the lead form page.</li>
-										<li><strong>2. Manage Custom Fields:</strong> <?php printf( '<a href="%s">%s</a>', esc_url( admin_url( 'edit.php?post_type=dm_field_group' ) ), __( 'Customize fields', 'deals-manager' ) ); ?> for your deals, contacts, and companies.</li>
-										<li><strong>3. View Reports:</strong> <?php printf( '<a href="%s">%s</a>', esc_url( admin_url( 'admin.php?page=deals-manager-reports' ) ), __( 'Check reports', 'deals-manager' ) ); ?> to see your team's progress.</li>
-										<li><strong>4. Install Sample Data:</strong> Use the button below to install sample data to see how the plugin works.</li>
+										<li><strong>1. <?php esc_html_e( 'Configure Settings:', 'deals-manager' ); ?></strong> <?php printf( '<a href="%s">%s</a>', esc_url( admin_url( 'admin.php?page=dm-settings' ) ), esc_html__( 'Go to Settings', 'deals-manager' ) ); ?> <?php esc_html_e( 'to set up the lead form page.', 'deals-manager' ); ?></li>
+										<li><strong>2. <?php esc_html_e( 'Manage Custom Fields:', 'deals-manager' ); ?></strong> <?php printf( '<a href="%s">%s</a>', esc_url( admin_url( 'edit.php?post_type=dm_field_group' ) ), esc_html__( 'Customize fields', 'deals-manager' ) ); ?> <?php esc_html_e( 'for your deals, contacts, and companies.', 'deals-manager' ); ?></li>
+										<li><strong>3. <?php esc_html_e( 'View Reports:', 'deals-manager' ); ?></strong> <?php printf( '<a href="%s">%s</a>', esc_url( admin_url( 'admin.php?page=deals-manager-reports' ) ), esc_html__( 'Check reports', 'deals-manager' ) ); ?> <?php esc_html_e( 'to see your team\'s progress.', 'deals-manager' ); ?></li>
+										<li><strong>4. <?php esc_html_e( 'Install Sample Data:', 'deals-manager' ); ?></strong> <?php esc_html_e( 'Use the button below to install sample data to see how the plugin works.', 'deals-manager' ); ?></li>
 									</ul>
 								</div>
 							</div>
 							<div class="postbox">
-								<h2 class="hndle"><span><?php _e( 'Sample Data', 'deals-manager' ); ?></span></h2>
+								<h2 class="hndle"><span><?php esc_html_e( 'Sample Data', 'deals-manager' ); ?></span></h2>
 								<div class="inside">
-									<p><?php _e( 'This will create sample deals, contacts, companies, etc., to help you get started.', 'deals-manager' ); ?></p>
+									<p><?php esc_html_e( 'This will create sample deals, contacts, companies, etc., to help you get started.', 'deals-manager' ); ?></p>
 									<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 										<input type="hidden" name="action" value="dm_install_sample_data">
 										<?php wp_nonce_field( 'dm_install_sample_data_nonce', 'dm_nonce' ); ?>
@@ -569,23 +578,26 @@ class Deals_Manager_Admin {
 		<?php
 	}
 
+	/**
+	 * Render the dashboard for Managers.
+	 */
 	private function render_manager_dashboard() {
 		?>
 		<div class="wrap dm-wrap">
-			<h1><?php _e( 'Manager Dashboard', 'deals-manager' ); ?></h1>
-			<p><?php _e( 'Welcome, Manager. Use this dashboard to oversee your team and track progress.', 'deals-manager' ); ?></p>
+			<h1><?php esc_html_e( 'Manager Dashboard', 'deals-manager' ); ?></h1>
+			<p><?php esc_html_e( 'Welcome, Manager. Use this dashboard to oversee your team and track progress.', 'deals-manager' ); ?></p>
 			<div class="postbox">
-				<h2 class="hndle"><span><?php _e( 'Your Role', 'deals-manager' ); ?></span></h2>
+				<h2 class="hndle"><span><?php esc_html_e( 'Your Role', 'deals-manager' ); ?></span></h2>
 				<div class="inside">
-					<p><?php _e( 'As a Manager, you can:', 'deals-manager' ); ?></p>
+					<p><?php esc_html_e( 'As a Manager, you can:', 'deals-manager' ); ?></p>
 					<ul>
-						<li>View all deals, contacts, and companies created by you and your team.</li>
-						<li>Access detailed reports on the pipeline and team performance.</li>
-						<li>Assign tasks and deals to your Sales Reps.</li>
+						<li><?php esc_html_e( 'View all deals, contacts, and companies created by you and your team.', 'deals-manager' ); ?></li>
+						<li><?php esc_html_e( 'Access detailed reports on the pipeline and team performance.', 'deals-manager' ); ?></li>
+						<li><?php esc_html_e( 'Assign tasks and deals to your Sales Reps.', 'deals-manager' ); ?></li>
 					</ul>
 					<p>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=deals-manager-reports' ) ); ?>" class="button button-primary"><?php _e( 'View Reports', 'deals-manager' ); ?></a>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=deals-manager-pipeline' ) ); ?>" class="button"><?php _e( 'View Pipeline', 'deals-manager' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=deals-manager-reports' ) ); ?>" class="button button-primary"><?php esc_html_e( 'View Reports', 'deals-manager' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=deals-manager-pipeline' ) ); ?>" class="button"><?php esc_html_e( 'View Pipeline', 'deals-manager' ); ?></a>
 					</p>
 				</div>
 			</div>
@@ -593,6 +605,9 @@ class Deals_Manager_Admin {
 		<?php
 	}
 
+	/**
+	 * Render the dashboard for Sales Reps.
+	 */
 	private function render_sales_rep_dashboard() {
 		$current_user = wp_get_current_user();
 		$lead_form_page_id = get_option('dm_settings_lead_form_page');
@@ -611,114 +626,39 @@ class Deals_Manager_Admin {
 		}
 		?>
 		<div class="wrap dm-wrap">
-			<h1><?php _e( 'Sales Rep Dashboard', 'deals-manager' ); ?></h1>
-			<p><?php _e( 'Welcome! Here are the tools you need to manage your leads and deals.', 'deals-manager' ); ?></p>
+			<h1><?php esc_html_e( 'Sales Rep Dashboard', 'deals-manager' ); ?></h1>
+			<p><?php esc_html_e( 'Welcome! Here are the tools you need to manage your leads and deals.', 'deals-manager' ); ?></p>
 
 			<div class="postbox">
-				<h2 class="hndle"><span><?php _e( 'How to Use Deals Manager', 'deals-manager' ); ?></span></h2>
+				<h2 class="hndle"><span><?php esc_html_e( 'How to Use Deals Manager', 'deals-manager' ); ?></span></h2>
 				<div class="inside">
-					<p><strong>1. Add Contacts & Companies:</strong> Start by adding your contacts and the companies they work for.</p>
-					<p><strong>2. Create Deals:</strong> When you have a potential sale, create a new deal and link it to a contact.</p>
-					<p><strong>3. Manage Your Pipeline:</strong> Use the <?php printf( '<a href="%s">Pipeline</a>', esc_url( admin_url( 'admin.php?page=deals-manager-pipeline' ) ) ); ?> to drag and drop your deals through the different stages.</p>
-					<p><strong>4. Stay on Top of Tasks:</strong> Create tasks for yourself to follow up on deals and contacts.</p>
+					<p><strong>1. <?php esc_html_e( 'Add Contacts & Companies:', 'deals-manager' ); ?></strong> <?php esc_html_e( 'Start by adding your contacts and the companies they work for.', 'deals-manager' ); ?></p>
+					<p><strong>2. <?php esc_html_e( 'Create Deals:', 'deals-manager' ); ?></strong> <?php esc_html_e( 'When you have a potential sale, create a new deal and link it to a contact.', 'deals-manager' ); ?></p>
+					<p><strong>3. <?php esc_html_e( 'Manage Your Pipeline:', 'deals-manager' ); ?></strong> <?php printf( __( 'Use the <a href="%s">Pipeline</a> to drag and drop your deals through the different stages.', 'deals-manager' ), esc_url( admin_url( 'admin.php?page=deals-manager-pipeline' ) ) ); ?></p>
+					<p><strong>4. <?php esc_html_e( 'Stay on Top of Tasks:', 'deals-manager' ); ?></strong> <?php esc_html_e( 'Create tasks for yourself to follow up on deals and contacts.', 'deals-manager' ); ?></p>
 				</div>
 			</div>
 
 			<div class="postbox">
-				<h2 class="hndle"><span><?php _e( 'Your Referral Tools', 'deals-manager' ); ?></span></h2>
+				<h2 class="hndle"><span><?php esc_html_e( 'Your Referral Tools', 'deals-manager' ); ?></span></h2>
 				<div class="inside">
 					<?php if ( $referral_url ) : ?>
-						<p><?php _e( 'Use the link below to automatically capture leads and have them assigned to you. Share it with potential clients or on your social media.', 'deals-manager' ); ?></p>
-						<p><strong>Your Referral Link:</strong></p>
+						<p><?php esc_html_e( 'Use the link below to automatically capture leads and have them assigned to you. Share it with potential clients or on your social media.', 'deals-manager' ); ?></p>
+						<p><strong><?php esc_html_e( 'Your Referral Link:', 'deals-manager' ); ?></strong></p>
 						<input type="text" value="<?php echo esc_url( $referral_url ); ?>" readonly class="large-text">
 
 						<hr style="margin: 20px 0;">
 
-						<p><?php _e( 'To embed the lead form on your own website, copy and paste the HTML code below:', 'deals-manager' ); ?></p>
-						<p><strong>HTML Embed Code:</strong></p>
+						<p><?php esc_html_e( 'To embed the lead form on your own website, copy and paste the HTML code below:', 'deals-manager' ); ?></p>
+						<p><strong><?php esc_html_e( 'HTML Embed Code:', 'deals-manager' ); ?></strong></p>
 						<textarea readonly class="large-text" rows="4"><?php echo esc_textarea( $iframe_code ); ?></textarea>
 					<?php else : ?>
-						<p><?php _e( 'Your referral link is not available yet. An administrator needs to select a page for the lead form in the plugin settings.', 'deals-manager' ); ?></p>
+						<p><?php esc_html_e( 'Your referral link is not available yet. An administrator needs to select a page for the lead form in the plugin settings.', 'deals-manager' ); ?></p>
 					<?php endif; ?>
 				</div>
 			</div>
 		</div>
 		<?php
-	}
-
-	/**
-	 * Add the settings page to the admin menu.
-	 *
-	 * @since 1.0.0
-	 */
-	public function add_settings_page() {
-		add_submenu_page(
-			'deals-manager',
-			__( 'Settings', 'deals-manager' ),
-			__( 'Settings', 'deals-manager' ),
-			'manage_options',
-			'dm-settings',
-			array( $this, 'render_settings_page' )
-		);
-	}
-
-	/**
-	 * Render the settings page.
-	 *
-	 * @since 1.0.0
-	 */
-	public function render_settings_page() {
-		?>
-		<div class="wrap">
-			<h1><?php _e( 'Deals Manager Settings', 'deals-manager' ); ?></h1>
-			<form action="options.php" method="post">
-				<?php
-				settings_fields( 'dm_settings_group' );
-				do_settings_sections( 'deals-manager-settings' );
-				submit_button();
-				?>
-			</form>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Register settings, sections, and fields.
-	 *
-	 * @since 1.0.0
-	 */
-	public function register_settings() {
-		register_setting( 'dm_settings_group', 'dm_settings_lead_form_page' );
-
-		add_settings_section(
-			'dm_general_settings_section',
-			__( 'General Settings', 'deals-manager' ),
-			null,
-			'deals-manager-settings'
-		);
-
-		add_settings_field(
-			'dm_lead_form_page_field',
-			__( 'Lead Form Page', 'deals-manager' ),
-			array( $this, 'render_lead_form_page_field' ),
-			'deals-manager-settings',
-			'dm_general_settings_section'
-		);
-	}
-
-	/**
-	 * Render the dropdown field for selecting the lead form page.
-	 *
-	 * @since 1.0.0
-	 */
-	public function render_lead_form_page_field() {
-		$option = get_option( 'dm_settings_lead_form_page' );
-		wp_dropdown_pages( array(
-			'name'              => 'dm_settings_lead_form_page',
-			'selected'          => $option,
-			'show_option_none'  => __( '— Select a Page —', 'deals-manager' ),
-		) );
-		echo '<p class="description">' . __( 'Select the page where you have placed the <code>[dm_lead_form]</code> shortcode. This is used to generate referral links for your sales reps.', 'deals-manager' ) . '</p>';
 	}
 
 	/**
@@ -951,6 +891,12 @@ class Deals_Manager_Admin {
 					'posts_per_page' => -1,
 					'post_status'    => 'publish',
 				);
+
+				// Filter by author for sales reps
+				if ( in_array( 'sales_rep', (array) wp_get_current_user()->roles, true ) ) {
+					$args['author'] = get_current_user_id();
+				}
+
 				$deals = new WP_Query( $args );
 
 				if ( $deals->have_posts() ) {
@@ -1058,8 +1004,12 @@ class Deals_Manager_Admin {
 			'post_status'    => 'publish',
 		);
 
+		// If a specific user is selected in the filter, use that.
+		// Otherwise, if the current user is a sales rep, only show their own deals.
 		if ( $user_id ) {
 			$args['author'] = $user_id;
+		} elseif ( in_array( 'sales_rep', (array) wp_get_current_user()->roles, true ) ) {
+			$args['author'] = get_current_user_id();
 		}
 
 		if ( $start_date || $end_date ) {
@@ -1177,8 +1127,12 @@ class Deals_Manager_Admin {
 			),
 		);
 
+		// If a specific user is selected in the filter, use that.
+		// Otherwise, if the current user is a sales rep, only show their own deals.
 		if ( $user_id ) {
 			$args['author'] = $user_id;
+		} elseif ( in_array( 'sales_rep', (array) wp_get_current_user()->roles, true ) ) {
+			$args['author'] = get_current_user_id();
 		}
 
 		if ( $start_date || $end_date ) {
@@ -1268,8 +1222,12 @@ class Deals_Manager_Admin {
 			),
 		);
 
+		// If a specific user is selected in the filter, use that.
+		// Otherwise, if the current user is a sales rep, only show their own deals.
 		if ( $user_id ) {
 			$args['author'] = $user_id;
+		} elseif ( in_array( 'sales_rep', (array) wp_get_current_user()->roles, true ) ) {
+			$args['author'] = get_current_user_id();
 		}
 
 		if ( $start_date || $end_date ) {
