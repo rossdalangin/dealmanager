@@ -1,118 +1,294 @@
 <?php
 /**
- * Plugin Name: Sample License Server API
- * Description: A sample implementation of a WordPress REST API endpoint for validating and serving plugin licenses.
- * Version: 1.0
- * Author: Ross Dalangin
- *
- * Instructions:
- * 1. Install this file as a plugin on your main website (the license server).
- * 2. This code assumes you have a way to manage licenses (e.g., a custom database table or integration with a service like WooCommerce).
- * 3. For this example, licenses are stored in a simple hardcoded array. In a real-world scenario, you would replace this with a database query.
- * 4. The endpoint will be available at: https://yourdomain.com/wp-json/license/v1/validate
+ * Plugin Name:       Sample License Server API (CPT Edition)
+ * Description:       A sample implementation of a WordPress REST API endpoint for validating and serving plugin licenses, managed via a Custom Post Type.
+ * Version:           2.0
+ * Author:            Ross Dalangin
  */
 
-// Hook into the REST API initialization
-add_action( 'rest_api_init', 'dm_register_license_api_endpoint' );
-
-/**
- * Register the custom REST API endpoint for license validation.
- */
-function dm_register_license_api_endpoint() {
-    register_rest_route( 'license/v1', '/validate', array(
-        'methods' => 'POST',
-        'callback' => 'dm_validate_license_key',
-        'permission_callback' => '__return_true', // Publicly accessible, security is handled by license key check.
-    ) );
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
 }
 
-/**
- * Callback function to validate the license key.
- *
- * @param WP_REST_Request $request The incoming request object.
- * @return WP_REST_Response The response object.
- */
-function dm_validate_license_key( WP_REST_Request $request ) {
+class DM_License_Server_Manager {
 
-    // ---
-    // 1. In a real application, you would query your database here.
-    //    For this example, we'll use a hardcoded array of license keys.
-    // ---
-    $licenses = array(
-        'VALID-KEY-12345' => array(
-            'status'        => 'active',
-            'expires'       => date('Y-m-d', strtotime('+1 year')),
-            'domains'       => array( 'http://localhost/wordpress/' ), // List of activated domains
-            'max_domains'   => 1,
-        ),
-        'EXPIRED-KEY-67890' => array(
-            'status'        => 'expired',
-            'expires'       => date('Y-m-d', strtotime('-1 month')),
-            'domains'       => array(),
-            'max_domains'   => 1,
-        ),
-        'MULTI-SITE-KEY' => array(
-            'status'        => 'active',
-            'expires'       => date('Y-m-d', strtotime('+2 years')),
-            'domains'       => array( 'http://site-a.com', 'http://site-b.com' ),
-            'max_domains'   => 5,
-        ),
-    );
+    public function __construct() {
+        // Register CPT and REST API endpoint
+        add_action( 'init', array( $this, 'register_license_cpt' ) );
+        add_action( 'rest_api_init', array( $this, 'register_license_api_endpoint' ) );
 
-    // ---
-    // 2. Get parameters from the client plugin's request.
-    // ---
-    $license_key = sanitize_text_field( $request->get_param( 'license_key' ) );
-    $domain      = esc_url_raw( $request->get_param( 'domain' ) );
+        // Add meta boxes for the CPT
+        add_action( 'add_meta_boxes', array( $this, 'add_license_meta_boxes' ) );
+        add_action( 'save_post_license', array( $this, 'save_license_meta_data' ) );
 
-    // ---
-    // 3. Prepare the response data.
-    // ---
-    $response_data = array(
-        'status'         => 'inactive',
-        'expires'        => null,
-        'latest_version' => '1.1.0', // The latest version of your plugin
-        'download_link'  => 'https://your-server.com/path/to/deals-manager-1.1.0.zip', // The direct download link
-    );
-
-    // ---
-    // 4. Perform the license validation logic.
-    // ---
-    if ( ! array_key_exists( $license_key, $licenses ) ) {
-        $response_data['status'] = 'invalid';
-        return new WP_REST_Response( $response_data, 403 ); // 403 Forbidden - Invalid Key
+        // Add settings page for plugin update info
+        add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
+        add_action( 'admin_init', array( $this, 'register_settings' ) );
     }
 
-    $license = $licenses[$license_key];
+    /**
+     * Register the "Licenses" Custom Post Type.
+     */
+    public function register_license_cpt() {
+        $labels = array(
+            'name'               => _x( 'Licenses', 'post type general name', 'dm-license-server' ),
+            'singular_name'      => _x( 'License', 'post type singular name', 'dm-license-server' ),
+            'menu_name'          => _x( 'Licenses', 'admin menu', 'dm-license-server' ),
+            'name_admin_bar'     => _x( 'License', 'add new on admin bar', 'dm-license-server' ),
+            'add_new'            => _x( 'Add New', 'license', 'dm-license-server' ),
+            'add_new_item'       => __( 'Add New License', 'dm-license-server' ),
+            'new_item'           => __( 'New License', 'dm-license-server' ),
+            'edit_item'          => __( 'Edit License', 'dm-license-server' ),
+            'view_item'          => __( 'View License', 'dm-license-server' ),
+            'all_items'          => __( 'All Licenses', 'dm-license-server' ),
+            'search_items'       => __( 'Search Licenses', 'dm-license-server' ),
+            'not_found'          => __( 'No licenses found.', 'dm-license-server' ),
+            'not_found_in_trash' => __( 'No licenses found in Trash.', 'dm-license-server' )
+        );
 
-    // Check if expired
-    if ( 'expired' === $license['status'] || strtotime( $license['expires'] ) < time() ) {
-        $response_data['status'] = 'expired';
-        return new WP_REST_Response( $response_data, 403 );
+        $args = array(
+            'labels'             => $labels,
+            'public'             => false,
+            'publicly_queryable' => false,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'query_var'          => false,
+            'rewrite'            => false,
+            'capability_type'    => 'post',
+            'has_archive'        => false,
+            'hierarchical'       => false,
+            'menu_position'      => 20,
+            'menu_icon'          => 'dashicons-lock',
+            'supports'           => array( 'title' )
+        );
+
+        register_post_type( 'license', $args );
     }
 
-    // Check if domain is already activated
-    if ( in_array( $domain, $license['domains'] ) ) {
-        // Domain is already active and valid
-        $response_data['status'] = 'active';
-        $response_data['expires'] = $license['expires'];
-    } else {
-        // Domain is not yet activated for this key. Check if there's space.
-        if ( count( $license['domains'] ) < $license['max_domains'] ) {
-            // There is space. Activate it.
-            // In a real app, you would save the new domain to the database here.
-            // For example: $licenses[$license_key]['domains'][] = $domain; update_option('my_licenses', $licenses);
-            $response_data['status'] = 'active'; // Activation successful
-            $response_data['expires'] = $license['expires'];
-        } else {
-            // No more activations left for this key.
-            $response_data['status'] = 'max_domains_reached';
+    /**
+     * Add meta boxes for the License CPT.
+     */
+    public function add_license_meta_boxes() {
+        add_meta_box(
+            'dm_license_details',
+            __( 'License Details', 'dm-license-server' ),
+            array( $this, 'render_license_details_meta_box' ),
+            'license',
+            'normal',
+            'high'
+        );
+    }
+
+    /**
+     * Render the content of the License Details meta box.
+     */
+    public function render_license_details_meta_box( $post ) {
+        wp_nonce_field( 'dm_save_license_meta', 'dm_license_meta_nonce' );
+
+        $license_key = get_post_meta( $post->ID, '_license_key', true );
+        $status = get_post_meta( $post->ID, '_license_status', true );
+        $expires = get_post_meta( $post->ID, '_license_expires', true );
+        $max_domains = get_post_meta( $post->ID, '_license_max_domains', true );
+        $activated_domains = get_post_meta( $post->ID, '_license_activated_domains', true );
+
+        // Use post title as license key if meta is empty
+        if ( empty( $license_key ) ) {
+            $license_key = $post->post_title;
+        }
+        ?>
+        <table class="form-table">
+            <tr>
+                <th><label for="dm_license_key">License Key</label></th>
+                <td><input type="text" id="dm_license_key" name="dm_license_key" value="<?php echo esc_attr( $license_key ); ?>" class="regular-text" readonly>
+                <p class="description">To change the key, change the post title and save.</p></td>
+            </tr>
+            <tr>
+                <th><label for="dm_license_status">Status</label></th>
+                <td>
+                    <select name="dm_license_status" id="dm_license_status">
+                        <option value="active" <?php selected( $status, 'active' ); ?>>Active</option>
+                        <option value="inactive" <?php selected( $status, 'inactive' ); ?>>Inactive</option>
+                        <option value="expired" <?php selected( $status, 'expired' ); ?>>Expired</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="dm_license_expires">Expires On</label></th>
+                <td><input type="date" id="dm_license_expires" name="dm_license_expires" value="<?php echo esc_attr( $expires ); ?>" class="regular-text"></td>
+            </tr>
+            <tr>
+                <th><label for="dm_license_max_domains">Max Activations</label></th>
+                <td><input type="number" id="dm_license_max_domains" name="dm_license_max_domains" value="<?php echo esc_attr( $max_domains ); ?>" class="small-text"></td>
+            </tr>
+            <tr>
+                <th><label for="dm_activated_domains">Activated Domains</label></th>
+                <td><textarea id="dm_activated_domains" name="dm_activated_domains" class="large-text" rows="5"><?php echo esc_textarea( implode( "\n", (array) $activated_domains ) ); ?></textarea>
+                <p class="description">One domain per line.</p></td>
+            </tr>
+        </table>
+        <?php
+    }
+
+    /**
+     * Save meta data when a license post is saved.
+     */
+    public function save_license_meta_data( $post_id ) {
+        if ( ! isset( $_POST['dm_license_meta_nonce'] ) || ! wp_verify_nonce( $_POST['dm_license_meta_nonce'], 'dm_save_license_meta' ) ) {
+            return;
+        }
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        // Save the post title as the license key meta for easy querying
+        $post_title = get_the_title( $post_id );
+        update_post_meta( $post_id, '_license_key', sanitize_text_field( $post_title ) );
+
+        // Save other fields
+        update_post_meta( $post_id, '_license_status', sanitize_text_field( $_POST['dm_license_status'] ) );
+        update_post_meta( $post_id, '_license_expires', sanitize_text_field( $_POST['dm_license_expires'] ) );
+        update_post_meta( $post_id, '_license_max_domains', intval( $_POST['dm_license_max_domains'] ) );
+
+        $domains = ! empty( $_POST['dm_activated_domains'] ) ? explode( "\n", $_POST['dm_activated_domains'] ) : array();
+        $domains = array_map( 'trim', $domains );
+        $domains = array_filter( $domains );
+        update_post_meta( $post_id, '_license_activated_domains', $domains );
+    }
+
+    /**
+     * Add the settings page for managing update information.
+     */
+    public function add_settings_page() {
+        add_submenu_page(
+            'edit.php?post_type=license',
+            'Plugin Update Settings',
+            'Update Settings',
+            'manage_options',
+            'dm-update-settings',
+            array( $this, 'render_settings_page' )
+        );
+    }
+
+    /**
+     * Render the settings page.
+     */
+    public function render_settings_page() {
+        ?>
+        <div class="wrap">
+            <h1>Plugin Update Settings</h1>
+            <form action="options.php" method="post">
+                <?php
+                settings_fields( 'dm_update_settings_group' );
+                do_settings_sections( 'dm-update-settings' );
+                submit_button();
+                ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Register settings, sections, and fields.
+     */
+    public function register_settings() {
+        register_setting( 'dm_update_settings_group', 'dm_latest_version' );
+        register_setting( 'dm_update_settings_group', 'dm_download_link' );
+
+        add_settings_section( 'dm_update_section', 'Plugin Details', null, 'dm-update-settings' );
+
+        add_settings_field( 'dm_latest_version_field', 'Latest Version', array( $this, 'render_version_field' ), 'dm-update-settings', 'dm_update_section' );
+        add_settings_field( 'dm_download_link_field', 'Download URL', array( $this, 'render_download_link_field' ), 'dm-update-settings', 'dm_update_section' );
+    }
+
+    public function render_version_field() {
+        $value = get_option( 'dm_latest_version', '1.0.0' );
+        echo '<input type="text" name="dm_latest_version" value="' . esc_attr( $value ) . '" class="regular-text" />';
+    }
+
+    public function render_download_link_field() {
+        $value = get_option( 'dm_download_link', '' );
+        echo '<input type="url" name="dm_download_link" value="' . esc_attr( $value ) . '" class="large-text" placeholder="https://your-site.com/path/to/plugin.zip" />';
+    }
+
+    /**
+     * Register the custom REST API endpoint for license validation.
+     */
+    public function register_license_api_endpoint() {
+        register_rest_route( 'license/v1', '/validate', array(
+            'methods' => 'POST',
+            'callback' => array( $this, 'validate_license_key' ),
+            'permission_callback' => '__return_true',
+        ) );
+    }
+
+    /**
+     * Callback function to validate the license key.
+     */
+    public function validate_license_key( WP_REST_Request $request ) {
+        $license_key = sanitize_text_field( $request->get_param( 'license_key' ) );
+        $domain      = esc_url_raw( $request->get_param( 'domain' ) );
+
+        $response_data = array(
+            'status'         => 'invalid',
+            'expires'        => null,
+            'latest_version' => get_option( 'dm_latest_version', '1.0.0' ),
+            'download_link'  => get_option( 'dm_download_link', '' ),
+        );
+
+        $args = array(
+            'post_type' => 'license',
+            'post_status' => 'publish',
+            'posts_per_page' => 1,
+            'meta_query' => array(
+                array(
+                    'key' => '_license_key',
+                    'value' => $license_key,
+                )
+            )
+        );
+        $license_posts = get_posts( $args );
+
+        if ( empty( $license_posts ) ) {
             return new WP_REST_Response( $response_data, 403 );
         }
-    }
 
-    // ---
-    // 5. Return the final response.
-    // ---
-    return new WP_REST_Response( $response_data, 200 );
+        $license_post_id = $license_posts[0]->ID;
+        $status = get_post_meta( $license_post_id, '_license_status', true );
+        $expires = get_post_meta( $license_post_id, '_license_expires', true );
+        $max_domains = (int) get_post_meta( $license_post_id, '_license_max_domains', true );
+        $activated_domains = (array) get_post_meta( $license_post_id, '_license_activated_domains', true );
+
+        if ( 'inactive' === $status ) {
+            $response_data['status'] = 'inactive';
+            return new WP_REST_Response( $response_data, 403 );
+        }
+
+        if ( 'expired' === $status || ( ! empty( $expires ) && strtotime( $expires ) < time() ) ) {
+            $response_data['status'] = 'expired';
+            return new WP_REST_Response( $response_data, 403 );
+        }
+
+        if ( in_array( $domain, $activated_domains ) ) {
+            $response_data['status'] = 'active';
+            $response_data['expires'] = $expires;
+        } else {
+            if ( count( $activated_domains ) < $max_domains ) {
+                $activated_domains[] = $domain;
+                update_post_meta( $license_post_id, '_license_activated_domains', $activated_domains );
+                $response_data['status'] = 'active';
+                $response_data['expires'] = $expires;
+            } else {
+                $response_data['status'] = 'max_domains_reached';
+                return new WP_REST_Response( $response_data, 403 );
+            }
+        }
+
+        return new WP_REST_Response( $response_data, 200 );
+    }
 }
+
+new DM_License_Server_Manager();
